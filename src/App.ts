@@ -2,13 +2,13 @@ import {Module} from "./Module";
 
 
 
-export type Newable<T> = { new (...args: any[]): T; };
-export type ModuleClassArray = Newable<Module>[];
+export type ModuleClass = typeof Module;
+export type ModuleClassArray = ModuleClass[];
 
 export type AppOptions = {
     modules: ModuleClassArray,
-    moduleDataName?: string;
 }
+
 
 
 /**
@@ -26,17 +26,10 @@ export class App {
     private readonly modules: ModuleClassArray;
 
     /**
-     * The name used to store module data in HTML elements.
-     * @private
-     * @readonly
-     */
-    private readonly moduleDataName: string;
-
-    /**
      * Instances of modules associated with HTML elements.
      * @private
      */
-    private moduleInstances: Record<HTMLElement, Module>;
+    private moduleInstances: Map<HTMLElement, Record<string, Module>>;
 
 
 
@@ -48,7 +41,6 @@ export class App {
      */
     constructor(options: AppOptions) {
         this.modules = options.modules;
-        this.moduleDataName = "data-" + (options.moduleDataName ?? "module");
 
         this.moduleInstances = new Map();
     }
@@ -67,13 +59,19 @@ export class App {
         }
 
         this.modules.forEach((moduleClass) => {
-            (context as ParentNode).querySelectorAll<HTMLElement>(`[${this.moduleDataName}=${moduleClass.name}]`)
-                .forEach((element) => {
-                    this.moduleInstances.set(element, {
-                        ...this.moduleInstances.get(element) || {},
-                        [moduleClass.name]: moduleClass.create(element, true),
-                    });
+            for (const element of (context as ParentNode).querySelectorAll<HTMLElement>(`[data-module-${moduleClass.name}]`)) {
+                if (element.dataset.dependsOn) {
+                    continue;
+                }
+
+                const module = moduleClass.create({ el: element }, true);
+                module.init();
+
+                this.moduleInstances.set(element, {
+                    ...this.moduleInstances.get(element) || {},
+                    [moduleClass.name]: module,
                 });
+            }
         });
     }
 

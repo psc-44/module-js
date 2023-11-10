@@ -1,44 +1,41 @@
-// module.exports = {
-//     "env": {
-//         "browser": true,
-//         "es2021": true
-//     },
-//     "extends": "standard-with-typescript",
-//     "overrides": [
-//         {
-//             "env": {
-//                 "node": true
-//             },
-//             "files": [
-//                 ".eslintrc.{js,cjs}"
-//             ],
-//             "parserOptions": {
-//                 "sourceType": "script"
-//             }
-//         }
-//     ],
-//     "parserOptions": {
-//         "ecmaVersion": "latest",
-//         "sourceType": "module"
-//     },
-//     "rules": {
-//     }
-// }
-
 module.exports = {
-    parser: "@typescript-eslint/parser",
-    extends: [
-        "plugin:@typescript-eslint/recommended",
-        "plugin:prettier/recommended"
+    "env": {
+        "browser": true,
+        "es2021": true
+    },
+    "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended"
     ],
-    plugins: [
+    "overrides": [
+    ],
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module"
+    },
+    "plugins": [
         "@typescript-eslint"
     ],
-    parserOptions: {
-        ecmaVersion: 2020,
-        sourceType: "module",
-    },
-    rules: {
-        // Add any additional rules or overrides here
-    },
-};
+    "rules": {
+        "indent": [
+            "error",
+            4
+        ],
+        "linebreak-style": [
+            "error",
+            "unix"
+        ],
+        "quotes": [
+            "error",
+            "double"
+        ],
+        "semi": [
+            "error",
+            "always"
+        ],
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-non-null-assertion": "off",
+        "no-prototype-builtins": "off"
+    }
+}
