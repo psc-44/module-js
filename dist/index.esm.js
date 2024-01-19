@@ -36,7 +36,12 @@ class App {
             context = document.documentElement;
         }
         this.modules.forEach((moduleClass) => {
-            for (const element of context.querySelectorAll(`[data-module-${moduleClass.name}]`)) {
+            const moduleAttribute = `data-module-${moduleClass.name}`;
+            const $targets = Array.from(context.querySelectorAll(`[${moduleAttribute}]`));
+            if (context?.hasAttribute(moduleAttribute)) {
+                $targets.push(context);
+            }
+            for (const element of $targets) {
                 if (element.dataset.dependsOn) {
                     continue;
                 }
@@ -57,7 +62,7 @@ class App {
      */
     destroy(context) {
         for (const [element, instances] of this.moduleInstances.entries()) {
-            if (context && !context.contains(element))
+            if (context && context !== element && !context.contains(element))
                 continue;
             Object.values(instances).forEach((instance) => {
                 instance.destroy();

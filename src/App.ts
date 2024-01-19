@@ -59,7 +59,16 @@ export class App {
         }
 
         this.modules.forEach((moduleClass) => {
-            for (const element of (context as ParentNode).querySelectorAll<HTMLElement>(`[data-module-${moduleClass.name}]`)) {
+            const moduleAttribute = `data-module-${moduleClass.name}`;
+            const $targets = Array.from(
+                (context as ParentNode).querySelectorAll<HTMLElement>(`[${moduleAttribute}]`)
+            );
+
+            if (context?.hasAttribute(moduleAttribute)) {
+                $targets.push(context);
+            }
+
+            for (const element of $targets) {
                 if (element.dataset.dependsOn) {
                     continue;
                 }
@@ -83,7 +92,7 @@ export class App {
      */
     destroy(context?: HTMLElement) {
         for (const [element, instances] of this.moduleInstances.entries()) {
-            if (context && !context.contains(element)) continue;
+            if (context && context !== element && !context.contains(element)) continue;
 
             Object.values(instances).forEach((instance) => {
                 instance.destroy();
