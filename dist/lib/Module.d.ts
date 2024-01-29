@@ -9,6 +9,7 @@ export type ModuleEventListenerOptions = boolean | EventListenerOptions;
  */
 export declare class Module extends EventEmitter {
     static name: string;
+    get name(): string;
     readonly el: HTMLElement;
     private _eventListeners;
     /**
@@ -86,11 +87,12 @@ export declare class Module extends EventEmitter {
      */
     setData(name: string, value: string | null, contextElement?: HTMLElement): void;
     /**
-     * Gets the attribute name for the module's custom data attributes.
+     * Generates a custom attribute name based on the module's name and an optional suffix.
      *
-     * @private
+     * @param suffix - An optional string to append to the attribute name.
+     * @returns The custom attribute name, formatted as "data-{name}" or "data-{name}-{suffix}".
      */
-    private get attributeName();
+    getAttributeName(suffix?: string): string;
     /**
      * Gets the selector query based on the provided selector.
      *
@@ -103,11 +105,12 @@ export declare class Module extends EventEmitter {
      * Creates a new instance of the module with the provided options.
      * If an instance already exists for the element, it returns the existing instance unless `recreate` is true.
      *
+     * @template M - The type of the Module.
      * @param {ModuleOptions} options - Options for configuring the new instance.
      * @param {boolean} [recreate=false] - If true, recreates the instance even if it already exists.
-     * @returns {Module} The module instance.
+     * @returns {M} The module instance.
      */
-    static create(options: ModuleOptions, recreate?: boolean): Module;
+    static create<M extends Module = Module>(options: ModuleOptions, recreate?: boolean): M;
     /**
      * Gets the CSS selector for finding elements with the module's data attribute.
      *

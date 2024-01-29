@@ -4,6 +4,9 @@ import { EventEmitter } from "@psc-44/event-emitter";
  */
 export class Module extends EventEmitter {
     static name;
+    get name() {
+        throw "Error! You need to override the 'name' getter in your class that extends from the Module class.";
+    }
     el;
     _eventListeners;
     /**
@@ -20,7 +23,7 @@ export class Module extends EventEmitter {
         super();
         this.el = options.el;
         this._eventListeners = new Map();
-        this.el[Module.name] = this;
+        this.el[this.name] = this;
     }
     /**
      * Initialization method for the module. Override this method in subclasses.
@@ -36,6 +39,7 @@ export class Module extends EventEmitter {
      * Destructor method for the module. Removes all event listeners.
      */
     destroy() {
+        this.clearEvents();
         this._eventListeners.forEach((listeners, element) => {
             listeners.forEach((listener, eventName) => {
                 element.removeEventListener(eventName, listener);
@@ -116,7 +120,7 @@ export class Module extends EventEmitter {
      */
     getData(name, contextElement) {
         const targetElement = contextElement || this.el;
-        return targetElement.getAttribute(`${this.attributeName}-${name}`);
+        return targetElement.getAttribute(this.getAttributeName(name));
     }
     /**
      * Sets data attribute value on the module's element.
@@ -128,18 +132,23 @@ export class Module extends EventEmitter {
     setData(name, value, contextElement) {
         const targetElement = contextElement || this.el;
         if (value === null) {
-            targetElement.removeAttribute(`${this.attributeName}-${name}`);
+            targetElement.removeAttribute(this.getAttributeName(name));
             return;
         }
-        targetElement.setAttribute(`${this.attributeName}-${name}`, value);
+        targetElement.setAttribute(this.getAttributeName(name), value);
     }
     /**
-     * Gets the attribute name for the module's custom data attributes.
+     * Generates a custom attribute name based on the module's name and an optional suffix.
      *
-     * @private
+     * @param suffix - An optional string to append to the attribute name.
+     * @returns The custom attribute name, formatted as "data-{name}" or "data-{name}-{suffix}".
      */
-    get attributeName() {
-        return `data-${Module.name}`;
+    getAttributeName(suffix) {
+        const result = `data-${this.name}`;
+        if (suffix) {
+            return `${result}-${suffix}`;
+        }
+        return result;
     }
     /**
      * Gets the selector query based on the provided selector.
@@ -153,15 +162,16 @@ export class Module extends EventEmitter {
         const idIndex = selector.indexOf("#");
         const attrIndex = selector.indexOf("[");
         const indexes = [classIndex, idIndex, attrIndex].filter((index) => index !== -1);
-        return indexes.length ? selector : `[${this.attributeName}-${selector}]`;
+        return indexes.length ? selector : `[${this.getAttributeName()}="${selector}"]`;
     }
     /**
      * Creates a new instance of the module with the provided options.
      * If an instance already exists for the element, it returns the existing instance unless `recreate` is true.
      *
+     * @template M - The type of the Module.
      * @param {ModuleOptions} options - Options for configuring the new instance.
      * @param {boolean} [recreate=false] - If true, recreates the instance even if it already exists.
-     * @returns {Module} The module instance.
+     * @returns {M} The module instance.
      */
     static create(options, recreate = false) {
         let instance;
