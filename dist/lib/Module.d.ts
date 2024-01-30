@@ -45,7 +45,7 @@ export declare class Module extends EventEmitter {
      */
     addEventListener(elements: HTMLElement[] | HTMLElement, eventName: string, listener: ModuleEventListener, options?: ModuleEventListenerOptions): void;
     /**
-     * Finds the first element matching the selector within the module's context.
+     * Finds the first element matching the selector within the module's context or the specified context.
      *
      * @template E - The type of the element.
      * @param {string} selector - The CSS selector for the element.

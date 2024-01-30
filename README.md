@@ -11,9 +11,9 @@ yarn add @psc-44/module-js
 - Modular application structure.
 - Centralized module management system to easily initialize, update, and destroy modules within specified contexts.
 - Encourages code reusability and extensibility.
-- Set module scoped events with delegation.
-- Select module scoped DOM elements.
-- Efficient module destruction witch automatically removes custom and scoped events.
+- Set module-scoped events with delegation.
+- Select module-scoped DOM elements.
+- Efficient module destruction that automatically removes custom and scoped events.
 
 
 ## Usage
@@ -34,7 +34,7 @@ app.init();
 
 ### Module example
 ```html
-<div data-module-my-module>
+<div data-module-my-module data-my-module-say="Hello world">
     <h1>
         MyModule
     </h1>
@@ -56,16 +56,12 @@ export class MyModule extends Module {
 	
     constructor(options) {
         super(options);
-		
-		this.onButtonClick = this.onButtonClick.bind(this);
     }
 	
-	init() {
-		this.addEventListener(this.$("button"), this.onButtonClick);
-    }
-
-    onButtonClick() {
-        console.log("Hello world");
+    init() {
+        this.addEventListener(this.$("button"), () => {
+            console.log(this.getData("say")); // Output: "Hello world"
+        });
     }
 }
 ```
@@ -80,10 +76,10 @@ export class MyModule extends Module {
 | `this.$all("selector"[, contextElement])`                           | Finds all elements matching the selector within the module's or specified context. You can also use basic CSS selectors like `.`, `#`, or `[]`.                                                                             | `this.$all("item")`                                                                                                                          |
 | `this.$parent("selector"[, contextElement])`                        | Finds the first parent element matching the selector within the module's or specified context. You can also use basic CSS selectors like `.`, `#`, or `[]`.                                                                 | `this.$parent("wrapper")`                                                                                                                    |
 | `this.getData("name"[, contextElement])`                            | Retrieves data attribute value from the module's or context element.                                                                                                                                                        | `this.getData("repeat-animation")`                                                                                                           |
-| `this.setData("name", "value"[, contextElement])`                   | Sets data attribute value on the module's or context element.                                                                                                                                                               | `this.setData("count", "5")`                                                                                                                 |
+| `this.setData("name", "value"[, contextElement])`                   | Sets the data attribute value on the module's or context element.                                                                                                                                                           | `this.setData("count", "5")`                                                                                                                 |
 | `this.getAttributeName(["name"])`                                   | Generates a custom attribute name based on the module's name and an optional suffix.                                                                                                                                        | `this.getAttributeName("repeat-animation")`                                                                                                  |
-| `MyModule.create(options[, recreate = false])`                      | Creates a new instance of the module with the provided options. If an instance already exists for the element, it returns the existing instance unless `recreate` is true.                                                  | `this.create({ el: moduleElement })`                                                                                                  |
-| `MyModule.getModuleSelector()`                                      | Gets the CSS selector for finding elements with the module's data attribute.                                                                                                                                                | `this.getModuleSelector()`                                                                                                         |
+| `MyModule.create(options[, recreate = false])`                      | Creates a new instance of the module with the provided options. If an instance already exists for the element, it returns the existing instance unless `recreate` is true.                                                  | `MyModule.create({ el: moduleElement })`                                                                                                     |
+| `MyModule.getModuleSelector()`                                      | Gets the CSS selector for finding elements with the module's data attribute.                                                                                                                                                | `MyModule.getModuleSelector()`                                                                                                               |
 
 
 ## App Methods
@@ -92,3 +88,7 @@ export class MyModule extends Module {
 | `this.init([context])`    | Initialize modules within a specified context or the entire document. | `this.init(document.getElementById("container")`    |
 | `this.destroy([context])` | Destroy modules within a specified context or the entire document.    | `this.destroy(document.getElementById("container")` |
 | `this.update([context])`  | Update modules within a specified context or the entire document.     | `this.update(document.getElementById("container")`  |
+
+
+## Credits
+This code is inspired by [modularJS](https://github.com/modularorg/modularjs).
