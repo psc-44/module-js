@@ -55,8 +55,13 @@ export class Module extends EventEmitter {
      * @param {ModuleEventListenerOptions} [options] - Optional options for the event listener.
      */
     addEventListener(elements, eventName, listener, options) {
-        if (!Array.isArray(elements)) {
-            elements = [elements];
+        if (typeof elements === "string") {
+            elements = this.$all(elements);
+        }
+        else {
+            if (!Array.isArray(elements)) {
+                elements = [elements];
+            }
         }
         if (!this._eventListeners) {
             this._eventListeners = new Map();

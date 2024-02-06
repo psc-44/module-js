@@ -43,7 +43,7 @@ export declare class Module extends EventEmitter {
      * @param {ModuleEventListener} listener - The event listener function.
      * @param {ModuleEventListenerOptions} [options] - Optional options for the event listener.
      */
-    addEventListener(elements: HTMLElement[] | HTMLElement, eventName: string, listener: ModuleEventListener, options?: ModuleEventListenerOptions): void;
+    addEventListener(elements: string | HTMLElement[] | HTMLElement, eventName: string, listener: ModuleEventListener, options?: ModuleEventListenerOptions): void;
     /**
      * Finds the first element matching the selector within the module's context or the specified context.
      *
@@ -110,7 +110,7 @@ export declare class Module extends EventEmitter {
      * @param {boolean} [recreate=false] - If true, recreates the instance even if it already exists.
      * @returns {M} The module instance.
      */
-    static create<M extends Module = Module>(options: ModuleOptions, recreate?: boolean): M;
+    static create<M extends Module>(options: ModuleOptions, recreate?: boolean): M;
     /**
      * Gets the CSS selector for finding elements with the module's data attribute.
      *

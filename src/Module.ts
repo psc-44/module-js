@@ -86,10 +86,14 @@ export class Module extends EventEmitter {
      * @param {ModuleEventListener} listener - The event listener function.
      * @param {ModuleEventListenerOptions} [options] - Optional options for the event listener.
      */
-    addEventListener(elements: HTMLElement[] | HTMLElement, eventName: string, listener: ModuleEventListener, options?: ModuleEventListenerOptions)
+    addEventListener(elements: string | HTMLElement[] | HTMLElement, eventName: string, listener: ModuleEventListener, options?: ModuleEventListenerOptions)
     {
-        if (!Array.isArray(elements)) {
-            elements = [elements];
+        if (typeof elements === "string") {
+            elements = this.$all(elements);
+        } else {
+            if (!Array.isArray(elements)) {
+                elements = [elements];
+            }
         }
 
         if (!this._eventListeners) {
@@ -240,7 +244,7 @@ export class Module extends EventEmitter {
      * @param {boolean} [recreate=false] - If true, recreates the instance even if it already exists.
      * @returns {M} The module instance.
      */
-    static create<M extends Module = Module>(options: ModuleOptions, recreate: boolean = false): M
+    static create<M extends Module>(options: ModuleOptions, recreate: boolean = false): M
     {
         let instance;
 
