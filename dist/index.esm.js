@@ -226,6 +226,37 @@ class Module extends EventEmitter {
         });
     }
     /**
+     * Removes an event listener to one or more elements.
+     *
+     * @param {HTMLElement[] | HTMLElement} elements - The target element(s) to detach the event listener from.
+     * @param {string} eventName - The name of the event.
+     * @param {ModuleEventListener} listener - The event listener function.
+     * @param {ModuleEventListenerOptions} [options] - Optional options for the event listener.
+     */
+    removeEventListener(elements, eventName, listener, options) {
+        if (!this._eventListeners) {
+            return;
+        }
+        if (typeof elements === "string") {
+            elements = this.$all(elements);
+        }
+        else {
+            if (!Array.isArray(elements)) {
+                elements = [elements];
+            }
+        }
+        for (const element of elements) {
+            element.removeEventListener(eventName, listener, options);
+            if (!this._eventListeners.has(element)) {
+                continue;
+            }
+            if (!this._eventListeners.get(element).get(eventName)) {
+                return;
+            }
+            this._eventListeners.get(element).delete(eventName);
+        }
+    }
+    /**
      * Finds the first element matching the selector within the module's context or the specified context.
      *
      * @template E - The type of the element.

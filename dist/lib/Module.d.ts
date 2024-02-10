@@ -45,6 +45,15 @@ export declare class Module extends EventEmitter {
      */
     addEventListener(elements: string | HTMLElement[] | HTMLElement, eventName: string, listener: ModuleEventListener, options?: ModuleEventListenerOptions): void;
     /**
+     * Removes an event listener to one or more elements.
+     *
+     * @param {HTMLElement[] | HTMLElement} elements - The target element(s) to detach the event listener from.
+     * @param {string} eventName - The name of the event.
+     * @param {ModuleEventListener} listener - The event listener function.
+     * @param {ModuleEventListenerOptions} [options] - Optional options for the event listener.
+     */
+    removeEventListener(elements: string | HTMLElement[] | HTMLElement, eventName: string, listener: ModuleEventListener, options?: ModuleEventListenerOptions): void;
+    /**
      * Finds the first element matching the selector within the module's context or the specified context.
      *
      * @template E - The type of the element.
