@@ -51,16 +51,17 @@ export class App {
         this.moduleInstances = new Map();
 
         this.mutationObserver = new MutationObserver(this.mutationCallback.bind(this));
-        this.mutationObserver.observe(document.body, {
-            childList: true,
-            subtree: true,
-        });
     }
 
 
 
     init(context?: ParentNode) {
         this.initModules(context);
+
+        this.mutationObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
     }
 
     destroy(context?: ParentNode) {

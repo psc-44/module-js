@@ -1,9 +1,5 @@
 import { EventEmitter } from "@psc-44/event-emitter";
-export type ModuleElements = Record<string, (Element | Element[])>;
-export type ModuleOptions = {
-    el: HTMLElement;
-    autoQueryElements: boolean;
-};
+export type ModuleElements = Record<string, (HTMLElement | HTMLElement[])>;
 /**
  * Base class for creating modular components with event handling.
  */
@@ -95,7 +91,7 @@ export declare class Module extends EventEmitter {
      * @param {boolean} useModuleSelector - An optional parameter indicating whether to use module-specific selectors. Default is true.
      * @returns {E | null} The first matching element, or null if not found.
      */
-    $<E extends Element = Element>(selector: string, context?: ParentNode, useModuleSelector?: boolean): E | null;
+    $<E extends HTMLElement = HTMLElement>(selector: string, context?: ParentNode, useModuleSelector?: boolean): E | null;
     /**
      * Finds all elements matching the selector within the module's context.
      *
@@ -105,33 +101,34 @@ export declare class Module extends EventEmitter {
      * @param {boolean} useModuleSelector - An optional parameter indicating whether to use module-specific selectors. Default is true.
      * @returns {E[]} An array of matching elements.
      */
-    $all<E extends Element = Element>(selector: string, context?: ParentNode, useModuleSelector?: boolean): E[];
+    $all<E extends HTMLElement = HTMLElement>(selector: string, context?: ParentNode, useModuleSelector?: boolean): E[];
     /**
      * Finds the first parent element matching the selector within the module's context.
      *
+     * @template E - The type of the element.
      * @param {string} selector - The CSS selector for the parent element.
      * @param {ParentNode} [context] - The context element to search within.
      * @param {boolean} useModuleSelector - An optional parameter indicating whether to use module-specific selectors. Default is true.
-     * @returns {Element | null} The first matching parent element, or null if not found.
+     * @returns {E | null} The first matching parent element, or null if not found.
      */
-    $parent(selector: string, context?: ParentNode, useModuleSelector?: boolean): Element | null;
+    $parent<E extends HTMLElement>(selector: string, context?: ParentNode, useModuleSelector?: boolean): E | null;
     private queryModuleElements;
     /**
      * Retrieves data attribute value from the module's element.
      *
      * @param {string} name - The name of the data attribute.
-     * @param {Element} [context] - The context element to retrieve data from.
+     * @param {HTMLElement} [context] - The context element to retrieve data from.
      * @returns {string | null} The value of the data attribute, or null if not found.
      */
-    getData(name: string, context?: Element): string | null;
+    getData(name: string, context?: HTMLElement): string | null;
     /**
      * Sets data attribute value on the module's element.
      *
      * @param {string} name - The name of the data attribute.
      * @param {string | null} value - The value to set. Use null to remove the attribute.
-     * @param {Element} [context] - The context element to set data on.
+     * @param {HTMLElement} [context] - The context element to set data on.
      */
-    setData(name: string, value: string | null, context?: Element): void;
+    setData(name: string, value: string | null, context?: HTMLElement): void;
     /**
      * Returns the module attribute with an optional value appended.
      *

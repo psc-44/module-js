@@ -3,13 +3,7 @@ import {bind, findParent, getSelectorFilteredEventListener, pascalToSnake} from 
 
 
 
-export type ModuleElements = Record<string, (Element | Element[])>;
-
-
-export type ModuleOptions = {
-    el: HTMLElement;
-    autoQueryElements: boolean,
-};
+export type ModuleElements = Record<string, (HTMLElement | HTMLElement[])>;
 
 
 
@@ -53,7 +47,7 @@ export class Module extends EventEmitter {
 
         this.el = el;
         this.$elements = null;
-        this.autoQueryElements = true;
+        this.autoQueryElements = false;
         this.autoBind = true;
     }
 
@@ -229,7 +223,7 @@ export class Module extends EventEmitter {
      * @param {boolean} useModuleSelector - An optional parameter indicating whether to use module-specific selectors. Default is true.
      * @returns {E | null} The first matching element, or null if not found.
      */
-    $<E extends Element = Element>(selector: string, context?: ParentNode, useModuleSelector: boolean = true): E | null
+    $<E extends HTMLElement = HTMLElement>(selector: string, context?: ParentNode, useModuleSelector: boolean = true): E | null
     {
         const parentNode = context || this.el;
 
@@ -245,7 +239,7 @@ export class Module extends EventEmitter {
      * @param {boolean} useModuleSelector - An optional parameter indicating whether to use module-specific selectors. Default is true.
      * @returns {E[]} An array of matching elements.
      */
-    $all<E extends Element = Element>(selector: string, context?: ParentNode, useModuleSelector: boolean = true): E[]
+    $all<E extends HTMLElement = HTMLElement>(selector: string, context?: ParentNode, useModuleSelector: boolean = true): E[]
     {
         const parentNode = context || this.el;
 
@@ -255,12 +249,13 @@ export class Module extends EventEmitter {
     /**
      * Finds the first parent element matching the selector within the module's context.
      *
+     * @template E - The type of the element.
      * @param {string} selector - The CSS selector for the parent element.
      * @param {ParentNode} [context] - The context element to search within.
      * @param {boolean} useModuleSelector - An optional parameter indicating whether to use module-specific selectors. Default is true.
-     * @returns {Element | null} The first matching parent element, or null if not found.
+     * @returns {E | null} The first matching parent element, or null if not found.
      */
-    $parent(selector: string, context?: ParentNode, useModuleSelector: boolean = true): Element | null
+    $parent<E extends HTMLElement>(selector: string, context?: ParentNode, useModuleSelector: boolean = true): E | null
     {
         const query = useModuleSelector ? this.getSelectorQuery(selector) : selector;
         return findParent(context ? context : this.el, query);
@@ -291,7 +286,7 @@ export class Module extends EventEmitter {
             }
 
             if (!Array.isArray(carry[name])) {
-                carry[name] = [(carry[name] as Element)];
+                carry[name] = [(carry[name] as HTMLElement)];
             }
 
             (carry[name] as Element[]).push($el);
@@ -305,10 +300,10 @@ export class Module extends EventEmitter {
      * Retrieves data attribute value from the module's element.
      *
      * @param {string} name - The name of the data attribute.
-     * @param {Element} [context] - The context element to retrieve data from.
+     * @param {HTMLElement} [context] - The context element to retrieve data from.
      * @returns {string | null} The value of the data attribute, or null if not found.
      */
-    getData(name: string, context?: Element): string | null
+    getData(name: string, context?: HTMLElement): string | null
     {
         const $target = context || this.el;
         return $target.getAttribute(this.getModuleAttributeName(name));
@@ -319,9 +314,9 @@ export class Module extends EventEmitter {
      *
      * @param {string} name - The name of the data attribute.
      * @param {string | null} value - The value to set. Use null to remove the attribute.
-     * @param {Element} [context] - The context element to set data on.
+     * @param {HTMLElement} [context] - The context element to set data on.
      */
-    setData(name: string, value: string | null, context?: Element): void
+    setData(name: string, value: string | null, context?: HTMLElement): void
     {
         const targetElement = context || this.el;
 

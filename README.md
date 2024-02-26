@@ -65,7 +65,7 @@ Set these option in your module sub class.
 
 | Option                   | Type          | Default | Description                                                   |
 |--------------------------|---------------|---------|---------------------------------------------------------------|
-| `this.autoQueryElements` | `boolean`     | `true`  | Query all elements on `init()`                                |
+| `this.autoQueryElements` | `boolean`     | `false` | Query all elements on `init()`                                |
 | `this.autoBind`          | `boolean`     | `true`  | Bind `this` to all module methods on `init()`                 |
 | `this.el`                | `HTMLElement` |         | The modules root element.                                     |
 | `this.$elements`         | `object`      | `null`  | Object of html elements bound by the modules data attributes. |

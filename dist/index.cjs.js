@@ -20,7 +20,12 @@ function bind(thisArg, ...functionNames) {
     if (!functionNames?.length) {
         functionNames = getObjectProperties(thisArg, (o, prop) => {
             // Exclude Object.prototype properties and only include functions
-            return !Object.prototype.hasOwnProperty(prop) && typeof thisArg[prop] === "function";
+            try {
+                return !Object.prototype.hasOwnProperty(prop) && typeof thisArg[prop] === "function";
+            }
+            catch (error) {
+                return false;
+            }
         });
     }
     functionNames.forEach((fn) => {
@@ -51,21 +56,55 @@ function getObjectProperties(obj, predicate) {
 /**
  * Finds the closest ancestor element of a given element that matches the specified selector, up to a specified limit.
  *
+ * @template E - The type of the element.
  * @param {ParentNode} element - The element from which to start searching.
  * @param {string} selector - The CSS selector to match against ancestor elements.
  * @param {ParentNode} limit - The limit up to which the search should be conducted. Defaults to the document element.
- * @returns {Element | null} The closest ancestor element matching the selector within the specified limit, or null if not found.
+ * @returns {E | null} The closest ancestor element matching the selector within the specified limit, or null if not found.
  */
 function findParent(element, selector, limit) {
     const limitNode = limit || document.documentElement;
     let parentNode = element;
-    while (parentNode && parentNode !== limitNode && parentNode instanceof Element) {
+    while (parentNode && parentNode !== limitNode && parentNode instanceof HTMLElement) {
         if (parentNode.matches(selector)) {
             return parentNode;
         }
         parentNode = parentNode.parentNode;
     }
     return null;
+}
+/**
+ * Checks if an element has a particular parent element.
+ *
+ * @param {ParentNode} element - The element to check for parentage.
+ * @param {ParentNode} parent - The parent element to check against.
+ * @returns {boolean} True if the element has the specified parent, otherwise false.
+ */
+function hasParent(element, parent) {
+    if (!element || !parent)
+        return false;
+    if (element === parent)
+        return true;
+    if (element.parentElement) {
+        return hasParent(element.parentElement, parent);
+    }
+    return false;
+}
+/**
+ * Returns an event listener function that filters events based on the target element and its ancestors.
+ *
+ * @param {ParentNode} element - The element to delegate events to.
+ * @param {EventListener} listener - The event listener function to be called when the event occurs.
+ * @returns {EventListener} The filtered event listener function.
+ */
+function getEventFilteredEventListener(element, listener) {
+    return (event) => {
+        if (!(event.target instanceof Element))
+            return;
+        if (element === event.currentTarget || hasParent(element, event.target)) {
+            listener({ ...event, currentTarget: element });
+        }
+    };
 }
 /**
  * Returns an event listener function that filters events based on a CSS selector.
@@ -114,13 +153,13 @@ class App {
         this.modules = options.modules;
         this.moduleInstances = new Map();
         this.mutationObserver = new MutationObserver(this.mutationCallback.bind(this));
+    }
+    init(context) {
+        this.initModules(context);
         this.mutationObserver.observe(document.body, {
             childList: true,
             subtree: true,
         });
-    }
-    init(context) {
-        this.initModules(context);
     }
     destroy(context) {
         this.mutationObserver.disconnect();
@@ -310,7 +349,7 @@ class Module extends EventEmitter {
         this._eventListeners = new Map();
         this.el = el;
         this.$elements = null;
-        this.autoQueryElements = true;
+        this.autoQueryElements = false;
         this.autoBind = true;
     }
     /**
@@ -464,10 +503,11 @@ class Module extends EventEmitter {
     /**
      * Finds the first parent element matching the selector within the module's context.
      *
+     * @template E - The type of the element.
      * @param {string} selector - The CSS selector for the parent element.
      * @param {ParentNode} [context] - The context element to search within.
      * @param {boolean} useModuleSelector - An optional parameter indicating whether to use module-specific selectors. Default is true.
-     * @returns {Element | null} The first matching parent element, or null if not found.
+     * @returns {E | null} The first matching parent element, or null if not found.
      */
     $parent(selector, context, useModuleSelector = true) {
         const query = useModuleSelector ? this.getSelectorQuery(selector) : selector;
@@ -504,7 +544,7 @@ class Module extends EventEmitter {
      * Retrieves data attribute value from the module's element.
      *
      * @param {string} name - The name of the data attribute.
-     * @param {Element} [context] - The context element to retrieve data from.
+     * @param {HTMLElement} [context] - The context element to retrieve data from.
      * @returns {string | null} The value of the data attribute, or null if not found.
      */
     getData(name, context) {
@@ -516,7 +556,7 @@ class Module extends EventEmitter {
      *
      * @param {string} name - The name of the data attribute.
      * @param {string | null} value - The value to set. Use null to remove the attribute.
-     * @param {Element} [context] - The context element to set data on.
+     * @param {HTMLElement} [context] - The context element to set data on.
      */
     setData(name, value, context) {
         const targetElement = context || this.el;
@@ -641,3 +681,9 @@ class Module extends EventEmitter {
 
 exports.App = App;
 exports.Module = Module;
+exports.bind = bind;
+exports.findParent = findParent;
+exports.getEventFilteredEventListener = getEventFilteredEventListener;
+exports.getSelectorFilteredEventListener = getSelectorFilteredEventListener;
+exports.hasParent = hasParent;
+exports.pascalToSnake = pascalToSnake;

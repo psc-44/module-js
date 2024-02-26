@@ -25,7 +25,11 @@ export function bind(thisArg: object, ...functionNames: string[]): void
     if (!functionNames?.length) {
         functionNames = getObjectProperties(thisArg, (o, prop) => {
             // Exclude Object.prototype properties and only include functions
-            return !Object.prototype.hasOwnProperty(prop) && typeof (thisArg as any)[prop] === "function";
+            try {
+                return !Object.prototype.hasOwnProperty(prop) && typeof (thisArg as any)[prop] === "function";
+            } catch (error) {
+                return false;
+            }
         });
     }
 
@@ -66,19 +70,20 @@ function getObjectProperties(obj: object, predicate: (obj: object, prop: string)
 /**
  * Finds the closest ancestor element of a given element that matches the specified selector, up to a specified limit.
  *
+ * @template E - The type of the element.
  * @param {ParentNode} element - The element from which to start searching.
  * @param {string} selector - The CSS selector to match against ancestor elements.
  * @param {ParentNode} limit - The limit up to which the search should be conducted. Defaults to the document element.
- * @returns {Element | null} The closest ancestor element matching the selector within the specified limit, or null if not found.
+ * @returns {E | null} The closest ancestor element matching the selector within the specified limit, or null if not found.
  */
-export function findParent(element: ParentNode, selector: string, limit?: ParentNode): Element | null
+export function findParent<E extends HTMLElement>(element: ParentNode, selector: string, limit?: ParentNode): E | null
 {
     const limitNode: ParentNode = limit || document.documentElement;
     let parentNode: ParentNode | null = element;
 
-    while (parentNode && parentNode !== limitNode && parentNode instanceof Element) {
+    while (parentNode && parentNode !== limitNode && parentNode instanceof HTMLElement) {
         if (parentNode.matches(selector)) {
-            return parentNode;
+            return (parentNode as E);
         }
 
         parentNode = parentNode.parentNode;

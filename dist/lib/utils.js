@@ -18,7 +18,12 @@ export function bind(thisArg, ...functionNames) {
     if (!functionNames?.length) {
         functionNames = getObjectProperties(thisArg, (o, prop) => {
             // Exclude Object.prototype properties and only include functions
-            return !Object.prototype.hasOwnProperty(prop) && typeof thisArg[prop] === "function";
+            try {
+                return !Object.prototype.hasOwnProperty(prop) && typeof thisArg[prop] === "function";
+            }
+            catch (error) {
+                return false;
+            }
         });
     }
     functionNames.forEach((fn) => {
@@ -49,15 +54,16 @@ function getObjectProperties(obj, predicate) {
 /**
  * Finds the closest ancestor element of a given element that matches the specified selector, up to a specified limit.
  *
+ * @template E - The type of the element.
  * @param {ParentNode} element - The element from which to start searching.
  * @param {string} selector - The CSS selector to match against ancestor elements.
  * @param {ParentNode} limit - The limit up to which the search should be conducted. Defaults to the document element.
- * @returns {Element | null} The closest ancestor element matching the selector within the specified limit, or null if not found.
+ * @returns {E | null} The closest ancestor element matching the selector within the specified limit, or null if not found.
  */
 export function findParent(element, selector, limit) {
     const limitNode = limit || document.documentElement;
     let parentNode = element;
-    while (parentNode && parentNode !== limitNode && parentNode instanceof Element) {
+    while (parentNode && parentNode !== limitNode && parentNode instanceof HTMLElement) {
         if (parentNode.matches(selector)) {
             return parentNode;
         }

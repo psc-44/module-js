@@ -29,13 +29,13 @@ export class App {
         this.modules = options.modules;
         this.moduleInstances = new Map();
         this.mutationObserver = new MutationObserver(this.mutationCallback.bind(this));
+    }
+    init(context) {
+        this.initModules(context);
         this.mutationObserver.observe(document.body, {
             childList: true,
             subtree: true,
         });
-    }
-    init(context) {
-        this.initModules(context);
     }
     destroy(context) {
         this.mutationObserver.disconnect();

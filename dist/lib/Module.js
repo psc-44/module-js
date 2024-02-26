@@ -31,7 +31,7 @@ export class Module extends EventEmitter {
         this._eventListeners = new Map();
         this.el = el;
         this.$elements = null;
-        this.autoQueryElements = true;
+        this.autoQueryElements = false;
         this.autoBind = true;
     }
     /**
@@ -185,10 +185,11 @@ export class Module extends EventEmitter {
     /**
      * Finds the first parent element matching the selector within the module's context.
      *
+     * @template E - The type of the element.
      * @param {string} selector - The CSS selector for the parent element.
      * @param {ParentNode} [context] - The context element to search within.
      * @param {boolean} useModuleSelector - An optional parameter indicating whether to use module-specific selectors. Default is true.
-     * @returns {Element | null} The first matching parent element, or null if not found.
+     * @returns {E | null} The first matching parent element, or null if not found.
      */
     $parent(selector, context, useModuleSelector = true) {
         const query = useModuleSelector ? this.getSelectorQuery(selector) : selector;
@@ -225,7 +226,7 @@ export class Module extends EventEmitter {
      * Retrieves data attribute value from the module's element.
      *
      * @param {string} name - The name of the data attribute.
-     * @param {Element} [context] - The context element to retrieve data from.
+     * @param {HTMLElement} [context] - The context element to retrieve data from.
      * @returns {string | null} The value of the data attribute, or null if not found.
      */
     getData(name, context) {
@@ -237,7 +238,7 @@ export class Module extends EventEmitter {
      *
      * @param {string} name - The name of the data attribute.
      * @param {string | null} value - The value to set. Use null to remove the attribute.
-     * @param {Element} [context] - The context element to set data on.
+     * @param {HTMLElement} [context] - The context element to set data on.
      */
     setData(name, value, context) {
         const targetElement = context || this.el;
