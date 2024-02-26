@@ -53,4 +53,5 @@ export declare class App {
     private destroyModules;
     private mutationCallback;
     private unregisterModuleInstance;
+    private getRegisteredModuleInstance;
 }

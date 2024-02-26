@@ -104,7 +104,7 @@ export class App {
             for (const element of elements) {
                 if (element.dataset.ignoreModule) continue;
 
-                const moduleInstance = module.create(element, true);
+                const moduleInstance = module.create(element);
                 moduleInstance.init();
 
                 this.moduleInstances.set(element, {

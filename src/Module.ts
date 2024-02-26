@@ -419,7 +419,7 @@ export class Module extends EventEmitter {
      */
     static create<M extends Module>(element: HTMLElement, recreate: boolean = false): M
     {
-        const instance = Module.getInstance<M>(element);
+        const instance = this.getInstance<M>(element);
         if (instance) {
             if (recreate) {
                 instance.destroy();
