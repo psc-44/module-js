@@ -1,6 +1,90 @@
 'use strict';
 
 /**
+ * Converts a string from PascalCase to snake_case.
+ *
+ * @param {string} pascalString - The string to be converted.
+ * @returns {string} The converted string in snake_case.
+ */
+function pascalToSnake(pascalString) {
+    return pascalString.replace(/[A-Z]/g, (match, offset) => (offset ? '_' : '') + match.toLowerCase());
+}
+/**
+ * Binds methods of an object to the object itself.
+ *
+ * @param {object} thisArg - The object whose methods are to be bound.
+ * @param {...string} functionNames - Names of the methods to be bound.
+ * @returns {void}
+ */
+function bind(thisArg, ...functionNames) {
+    if (!functionNames?.length) {
+        functionNames = getObjectProperties(thisArg, (o, prop) => {
+            // Exclude Object.prototype properties and only include functions
+            return !Object.prototype.hasOwnProperty(prop) && typeof thisArg[prop] === "function";
+        });
+    }
+    functionNames.forEach((fn) => {
+        if (thisArg.hasOwnProperty(fn))
+            return;
+        thisArg[fn] = (thisArg[fn]).bind(thisArg);
+    });
+}
+/**
+ * Retrieves the properties of an object based on a given predicate.
+ *
+ * @param {object} obj - The object whose properties are to be retrieved.
+ * @param {(obj: object, prop: string) => boolean} predicate - The predicate function to filter the properties.
+ * @returns {string[]} An array containing the properties of the object that satisfy the predicate.
+ */
+function getObjectProperties(obj, predicate) {
+    let properties = [];
+    let currentObj = obj;
+    // Iterate over the prototype chain
+    while (currentObj) {
+        let ownProps = Object.getOwnPropertyNames(currentObj);
+        properties.push(...ownProps.filter(prop => predicate(currentObj, prop)));
+        // Move up the prototype chain
+        currentObj = Object.getPrototypeOf(currentObj);
+    }
+    return Array.from(new Set(properties));
+}
+/**
+ * Finds the closest ancestor element of a given element that matches the specified selector, up to a specified limit.
+ *
+ * @param {ParentNode} element - The element from which to start searching.
+ * @param {string} selector - The CSS selector to match against ancestor elements.
+ * @param {ParentNode} limit - The limit up to which the search should be conducted. Defaults to the document element.
+ * @returns {Element | null} The closest ancestor element matching the selector within the specified limit, or null if not found.
+ */
+function findParent(element, selector, limit) {
+    const limitNode = limit || document.documentElement;
+    let parentNode = element;
+    while (parentNode && parentNode !== limitNode && parentNode instanceof Element) {
+        if (parentNode.matches(selector)) {
+            return parentNode;
+        }
+        parentNode = parentNode.parentNode;
+    }
+    return null;
+}
+/**
+ * Returns an event listener function that filters events based on a CSS selector.
+ *
+ * @param {string} selector - The CSS selector to match against elements.
+ * @param {EventListener} listener - The event listener function to be called when the event occurs.
+ * @returns {EventListener} The filtered event listener function.
+ */
+function getSelectorFilteredEventListener(selector, listener) {
+    return (event) => {
+        if (!(event.target instanceof Element))
+            return;
+        if (!findParent(event.target, selector))
+            return;
+        return listener({ ...event, currentTarget: event.target });
+    };
+}
+
+/**
  * The main application class that manages modules.
  *
  * @class
@@ -12,11 +96,13 @@ class App {
      * @readonly
      */
     modules;
+    mutationObserver;
     /**
      * Instances of modules associated with HTML elements.
      * @private
      */
     moduleInstances;
+    static instance;
     /**
      * Creates an instance of the App class.
      *
@@ -24,63 +110,104 @@ class App {
      * @param {AppOptions} options - The options for configuring the App instance.
      */
     constructor(options) {
+        App.instance = this;
         this.modules = options.modules;
         this.moduleInstances = new Map();
+        this.mutationObserver = new MutationObserver(this.mutationCallback.bind(this));
+        this.mutationObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+    }
+    init(context) {
+        this.initModules(context);
+    }
+    destroy(context) {
+        this.mutationObserver.disconnect();
+        this.destroyModules(context);
+    }
+    /**
+     * Initializes and destroys modules within a specified context or the entire document.
+     *
+     * @param {ParentNode} [context] - The context in which to initialize modules.
+     */
+    update(context) {
+        this.destroyModules(context);
+        this.initModules(context);
     }
     /**
      * Initialize modules within a specified context or the entire document.
      *
-     * @param {HTMLElement} [context] - The context in which to initialize modules.
-     * @memberof App
+     * @param {ParentNode} [context] - The context in which to initialize modules.
      */
-    init(context) {
+    initModules(context) {
         if (!context) {
             context = document.documentElement;
         }
-        this.modules.forEach((moduleClass) => {
-            const moduleAttribute = `data-module-${moduleClass.name}`;
-            const $targets = Array.from(context.querySelectorAll(`[${moduleAttribute}]`));
-            if (context?.hasAttribute(moduleAttribute)) {
-                $targets.push(context);
+        for (const module of this.modules) {
+            const name = pascalToSnake(module.name);
+            const moduleAttribute = `data-module-${name}`;
+            const elements = Array.from(context.querySelectorAll(`[${moduleAttribute}]`));
+            if (context instanceof HTMLElement && context.hasAttribute(moduleAttribute)) {
+                elements.push(context);
             }
-            for (const element of $targets) {
-                if (element.dataset.dependsOn) {
+            for (const element of elements) {
+                if (element.dataset.ignoreModule)
                     continue;
-                }
-                const module = moduleClass.create({ el: element }, true);
-                module.init();
+                const moduleInstance = module.create(element, true);
+                moduleInstance.init();
                 this.moduleInstances.set(element, {
                     ...this.moduleInstances.get(element) || {},
-                    [moduleClass.name]: module,
+                    [name]: moduleInstance,
                 });
             }
-        });
+        }
     }
     /**
      * Destroy modules within a specified context or the entire document.
      *
-     * @param {HTMLElement} [context] - The context in which to destroy modules.
+     * @param {ParentNode} [context] - The context in which to destroy modules.
      * @memberof App
      */
-    destroy(context) {
+    destroyModules(context) {
         for (const [element, instances] of this.moduleInstances.entries()) {
             if (context && context !== element && !context.contains(element))
                 continue;
             Object.values(instances).forEach((instance) => {
                 instance.destroy();
+                this.unregisterModuleInstance(element, instance);
             });
-            this.moduleInstances.delete(element);
         }
     }
-    /**
-     * Update modules within a specified context or the entire document.
-     *
-     * @param {HTMLElement} [context] - The context in which to update modules.
-     * @memberof App
-     */
-    update(context) {
-        this.destroy(context);
-        this.init(context);
+    mutationCallback(mutations) {
+        mutations.forEach((mutation) => {
+            for (const node of mutation.removedNodes) {
+                if (node.nodeType !== Node.ELEMENT_NODE)
+                    continue;
+                if (!(node instanceof HTMLElement))
+                    continue;
+                this.destroyModules(node);
+            }
+            if (!(mutation.target instanceof HTMLElement))
+                return;
+            this.initModules(mutation.target);
+        });
+    }
+    unregisterModuleInstance(element, instance) {
+        let instances = this.moduleInstances.get(element);
+        if (!instances)
+            return;
+        if (instance) {
+            delete instances[instance.name];
+        }
+        else {
+            instances = {};
+        }
+        if (Object.keys(instances).length) {
+            this.moduleInstances.set(element, instances);
+            return;
+        }
+        this.moduleInstances.delete(element);
     }
 }
 
@@ -156,27 +283,35 @@ class EventEmitter {
  * Base class for creating modular components with event handling.
  */
 class Module extends EventEmitter {
-    static name;
-    get name() {
-        throw "Error! You need to override the 'name' getter in your class that extends from the Module class.";
-    }
-    el;
+    _name;
+    _moduleAttribute;
     _eventListeners;
+    el;
+    $elements;
+    autoQueryElements;
+    autoBind;
+    get name() {
+        return this._name;
+    }
     /**
      * Creates an instance of the Module class.
      *
-     * @param {ModuleOptions} options - Options for configuring the module.
+     * @param {HTMLElement} el - Options for configuring the module.
      * @constructor
      * @note Handle tasks in the constructor that are essential for initializing the module
      * but should have no adverse effects if the module undergoes updates (destroy and init)
      * without creating a new instance. The constructor is suitable for code that ensures
      * the module's basic structure and functionality, facilitating smooth reinitialization when necessary.
      */
-    constructor(options) {
+    constructor(el) {
         super();
-        this.el = options.el;
+        this._name = pascalToSnake(this.constructor.name);
+        this._moduleAttribute = `data-${this._name}`;
         this._eventListeners = new Map();
-        this.el[this.name] = this;
+        this.el = el;
+        this.$elements = null;
+        this.autoQueryElements = true;
+        this.autoBind = true;
     }
     /**
      * Initialization method for the module. Override this method in subclasses.
@@ -186,7 +321,8 @@ class Module extends EventEmitter {
      * updates (destroy and init) without necessitating the creation of a new instance.
      */
     init() {
-        // Override this method in subclasses.
+        this.$elements = this.autoQueryElements ? this.queryModuleElements() : null;
+        this.autoBind && bind(this);
     }
     /**
      * Destructor method for the module. Removes all event listeners.
@@ -200,131 +336,208 @@ class Module extends EventEmitter {
         });
     }
     /**
-     * Adds an event listener to one or more elements.
+     * Adds an event listener to one or more DOM elements.
      *
-     * @param {HTMLElement[] | HTMLElement} elements - The target element(s) to attach the event listener to.
-     * @param {string} eventName - The name of the event to listen for.
-     * @param {ModuleEventListener} listener - The event listener function.
-     * @param {ModuleEventListenerOptions} [options] - Optional options for the event listener.
+     * @param {string | EventTarget | EventTarget[]} targets - The target element(s) or module scoped element(s) to attach the event listener to. Can be a string selector, a single DOM element, or an array of DOM elements.
+     * @param {string} type - A string representing the event type to listen for, e.g., "click" or "mouseover".
+     * @param {EventListenerOrEventListenerObject} listener - The function or object that receives a notification when an event of the specified type occurs.
+     * @param {null | boolean | AddEventListenerOptions} options - An optional parameter that specifies characteristics about the event listener.
+     * @returns {void}
      */
-    addEventListener(elements, eventName, listener, options) {
-        if (typeof elements === "string") {
-            elements = this.$all(elements);
+    addEventListener(targets, type, listener, options) {
+        let $targets;
+        if (typeof targets === "string") {
+            $targets = this.$all(targets);
+        }
+        else if (!Array.isArray(targets)) {
+            $targets = [targets];
         }
         else {
-            if (!Array.isArray(elements)) {
-                elements = [elements];
-            }
+            $targets = targets;
         }
-        if (!this._eventListeners) {
-            this._eventListeners = new Map();
-        }
-        elements.forEach((element) => {
-            if (!this._eventListeners.has(element)) {
-                this._eventListeners.set(element, new Map());
+        $targets.forEach(($target) => {
+            if (!this._eventListeners.has($target)) {
+                this._eventListeners.set($target, new Map());
             }
-            element.addEventListener(eventName, listener, options);
-            this._eventListeners.get(element)?.set(eventName, listener);
+            $target.addEventListener(type, listener, options);
+            this._eventListeners.get($target)?.set(type, listener);
         });
     }
     /**
-     * Removes an event listener to one or more elements.
+     * Removes an event listener from one or more DOM elements or targets.
      *
-     * @param {HTMLElement[] | HTMLElement} elements - The target element(s) to detach the event listener from.
-     * @param {string} eventName - The name of the event.
-     * @param {ModuleEventListener} listener - The event listener function.
-     * @param {ModuleEventListenerOptions} [options] - Optional options for the event listener.
+     * @param {string | EventTarget | EventTarget[]} targets - The target element(s) or module scoped element(s) from which to remove the event listener. Can be a string selector, a single DOM element, or an array of DOM elements.
+     * @param {string} type - A string representing the event type for which to remove the listener, e.g., "click" or "mouseover".
+     * @param {null | boolean | EventListenerOptions} options - An optional parameter that specifies characteristics about the event listener.
+     * @returns {void}
      */
-    removeEventListener(elements, eventName, listener, options) {
-        if (!this._eventListeners) {
-            return;
+    removeEventListener(targets, type, options) {
+        let $targets;
+        if (typeof targets === "string") {
+            $targets = this.$all(targets);
         }
-        if (typeof elements === "string") {
-            elements = this.$all(elements);
+        else if (!Array.isArray(targets)) {
+            $targets = [targets];
         }
         else {
-            if (!Array.isArray(elements)) {
-                elements = [elements];
-            }
+            $targets = targets;
         }
-        for (const element of elements) {
-            element.removeEventListener(eventName, listener, options);
-            if (!this._eventListeners.has(element)) {
+        for (const $target of $targets) {
+            if (!this._eventListeners.has($target)) {
                 continue;
             }
-            if (!this._eventListeners.get(element).get(eventName)) {
-                return;
+            const listener = this._eventListeners.get($target).get(type);
+            if (!listener) {
+                continue;
             }
-            this._eventListeners.get(element).delete(eventName);
+            $target.removeEventListener(type, listener, options);
+            this._eventListeners.get($target).delete(type);
         }
+    }
+    /**
+     * Adds a filtered event listener to one or more DOM elements or targets.
+     * The listener will only be invoked when events of the specified type occur on elements matching the given selector.
+     *
+     * @param {string | EventTarget | EventTarget[]} targets - The target element(s) to attach the event listener to. Can be a string selector, a single DOM element, or an array of DOM elements.
+     * @param {string} type - A string representing the event type to listen for, e.g., "click" or "mouseover".
+     * @param {EventListener} listener - The event listener function to be called when the event occurs.
+     * @param {string} selector - A CSS selector string representing the elements to which the event listener will be attached.
+     * @param {null | boolean | AddEventListenerOptions} options - An optional parameter that specifies characteristics about the event listener.
+     * @returns {void}
+     */
+    addFilteredEventListener(targets, type, listener, selector, options) {
+        this.addEventListener(targets, type, this.getModuleSelectorFilteredEventListener(selector, listener), options);
+    }
+    /**
+     * Dispatches a custom DOM event from the current element with the specified type and optional details.
+     *
+     * @param {string} type - The type of the custom event to dispatch.
+     * @param {object=} detail - An optional object containing additional data to include with the event. Defaults to an empty object if not provided.
+     * @returns {void}
+     */
+    dispatchDomEvent(type, detail = {}) {
+        this.el.dispatchEvent(new CustomEvent(type, {
+            detail: {
+                ...detail,
+                module: this,
+            },
+            bubbles: true,
+            cancelable: false,
+        }));
+    }
+    /**
+     * Returns a filtered event listener function that listens to events delegated to elements matching the specified selector within the module.
+     *
+     * @param {string} selector - A CSS selector string representing the elements to which the event listener will be attached. @see {getSelectorQuery}
+     * @param {EventListener} listener - The event listener function to be called when the event occurs.
+     * @returns {EventListener} The filtered event listener function for the specified selector within the module.
+     */
+    getModuleSelectorFilteredEventListener(selector, listener) {
+        return getSelectorFilteredEventListener(this.getSelectorQuery(selector), listener);
     }
     /**
      * Finds the first element matching the selector within the module's context or the specified context.
      *
      * @template E - The type of the element.
      * @param {string} selector - The CSS selector for the element.
-     * @param {HTMLElement} [contextElement] - The context element to search within.
+     * @param {ParentNode} [context] - The context element to search within.
+     * @param {boolean} useModuleSelector - An optional parameter indicating whether to use module-specific selectors. Default is true.
      * @returns {E | null} The first matching element, or null if not found.
      */
-    $(selector, contextElement) {
-        const parentElement = contextElement || this.el;
-        return parentElement.querySelector(this.getSelectorQuery(selector));
+    $(selector, context, useModuleSelector = true) {
+        const parentNode = context || this.el;
+        return parentNode.querySelector(useModuleSelector ? this.getSelectorQuery(selector) : selector);
     }
     /**
      * Finds all elements matching the selector within the module's context.
      *
      * @template E - The type of the elements.
-     * @param {string} selectors - The CSS selector for the elements.
-     * @param {HTMLElement} [contextElement] - The context element to search within.
+     * @param {string} selector - The CSS selector for the elements.
+     * @param {ParentNode} [context] - The context element to search within.
+     * @param {boolean} useModuleSelector - An optional parameter indicating whether to use module-specific selectors. Default is true.
      * @returns {E[]} An array of matching elements.
      */
-    $all(selectors, contextElement) {
-        const parentElement = contextElement || this.el;
-        return Array.from(parentElement.querySelectorAll(this.getSelectorQuery(selectors)));
+    $all(selector, context, useModuleSelector = true) {
+        const parentNode = context || this.el;
+        return Array.from(parentNode.querySelectorAll(useModuleSelector ? this.getSelectorQuery(selector) : selector));
     }
     /**
      * Finds the first parent element matching the selector within the module's context.
      *
      * @param {string} selector - The CSS selector for the parent element.
-     * @param {HTMLElement} [contextElement] - The context element to search within.
+     * @param {ParentNode} [context] - The context element to search within.
+     * @param {boolean} useModuleSelector - An optional parameter indicating whether to use module-specific selectors. Default is true.
      * @returns {Element | null} The first matching parent element, or null if not found.
      */
-    $parent(selector, contextElement) {
-        const query = this.getSelectorQuery(selector);
-        let parentElement = contextElement ? contextElement : this.el;
-        while (parentElement && parentElement !== document.documentElement && (parentElement instanceof Element)) {
-            if (parentElement.matches(query)) {
-                return parentElement;
+    $parent(selector, context, useModuleSelector = true) {
+        const query = useModuleSelector ? this.getSelectorQuery(selector) : selector;
+        return findParent(context ? context : this.el, query);
+        // let parentNode: ParentNode | null = context ? context : this.el;
+        //
+        // while (parentNode && parentNode !== document.documentElement && parentNode instanceof Element) {
+        //     if (parentNode.matches(query)) {
+        //         return parentNode;
+        //     }
+        //
+        //     parentNode = parentNode.parentNode;
+        // }
+        //
+        // return null;
+    }
+    queryModuleElements() {
+        return this.$all(`[${this._moduleAttribute}]`).reduce((carry, $el) => {
+            const name = $el.getAttribute(this._moduleAttribute);
+            if (!name)
+                return carry;
+            if (!carry.hasOwnProperty(name)) {
+                carry[name] = $el;
+                return carry;
             }
-            parentElement = parentElement.parentNode;
-        }
-        return null;
+            if (!Array.isArray(carry[name])) {
+                carry[name] = [carry[name]];
+            }
+            carry[name].push($el);
+            return carry;
+        }, {});
     }
     /**
      * Retrieves data attribute value from the module's element.
      *
      * @param {string} name - The name of the data attribute.
-     * @param {HTMLElement} [contextElement] - The context element to retrieve data from.
+     * @param {Element} [context] - The context element to retrieve data from.
      * @returns {string | null} The value of the data attribute, or null if not found.
      */
-    getData(name, contextElement) {
-        const targetElement = contextElement || this.el;
-        return targetElement.getAttribute(this.getAttributeName(name));
+    getData(name, context) {
+        const $target = context || this.el;
+        return $target.getAttribute(this.getModuleAttributeName(name));
     }
     /**
      * Sets data attribute value on the module's element.
      *
      * @param {string} name - The name of the data attribute.
      * @param {string | null} value - The value to set. Use null to remove the attribute.
-     * @param {HTMLElement} [contextElement] - The context element to set data on.
+     * @param {Element} [context] - The context element to set data on.
      */
-    setData(name, value, contextElement) {
-        const targetElement = contextElement || this.el;
+    setData(name, value, context) {
+        const targetElement = context || this.el;
         if (value === null) {
-            targetElement.removeAttribute(this.getAttributeName(name));
+            targetElement.removeAttribute(this.getModuleAttributeName(name));
             return;
         }
-        targetElement.setAttribute(this.getAttributeName(name), value);
+        targetElement.setAttribute(this.getModuleAttributeName(name), value);
+    }
+    /**
+     * Returns the module attribute with an optional value appended.
+     *
+     * @param {string | null} value - An optional value to append to the module attribute. If not provided, only the attribute itself is returned.
+     * @returns {string} The module attribute with an optional value appended, or just the attribute if no value is provided.
+     */
+    getModuleAttribute(value) {
+        const result = this._moduleAttribute;
+        if (value) {
+            return `${result}="${value}"`;
+        }
+        return result;
     }
     /**
      * Generates a custom attribute name based on the module's name and an optional suffix.
@@ -332,15 +545,15 @@ class Module extends EventEmitter {
      * @param suffix - An optional string to append to the attribute name.
      * @returns The custom attribute name, formatted as "data-{name}" or "data-{name}-{suffix}".
      */
-    getAttributeName(suffix) {
-        const result = `data-${this.name}`;
+    getModuleAttributeName(suffix) {
+        const result = this._moduleAttribute;
         if (suffix) {
             return `${result}-${suffix}`;
         }
         return result;
     }
     /**
-     * Gets the selector query based on the provided selector.
+     * Returns the selector query based on the provided selector.
      *
      * @param {string} selector - The original CSS selector.
      * @returns {string} The modified selector query.
@@ -351,39 +564,78 @@ class Module extends EventEmitter {
         const idIndex = selector.indexOf("#");
         const attrIndex = selector.indexOf("[");
         const indexes = [classIndex, idIndex, attrIndex].filter((index) => index !== -1);
-        return indexes.length ? selector : `[${this.getAttributeName()}="${selector}"]`;
+        return indexes.length ? selector : `[${this._moduleAttribute}="${selector}"]`;
+    }
+    /**
+     * Returns the name of the class in snake_case format.
+     *
+     * @returns {string}
+     */
+    static getName() {
+        return pascalToSnake(this.name);
+    }
+    /**
+     * Returns the CSS selector of the module's data attribute.
+     *
+     * @returns {string}
+     */
+    static getModuleSelector() {
+        return `[data-module-${this.getName()}]`;
+    }
+    static getInstance(element) {
+        const name = this.getName();
+        return element.hasOwnProperty(name) ? element[name] : null;
     }
     /**
      * Creates a new instance of the module with the provided options.
      * If an instance already exists for the element, it returns the existing instance unless `recreate` is true.
      *
      * @template M - The type of the Module.
-     * @param {ModuleOptions} options - Options for configuring the new instance.
+     * @param {HTMLElement} element - Options for configuring the new instance.
      * @param {boolean} [recreate=false] - If true, recreates the instance even if it already exists.
      * @returns {M} The module instance.
      */
-    static create(options, recreate = false) {
-        let instance;
-        if (options.el.hasOwnProperty(this.name)) {
-            instance = options.el[this.name];
-            if (instance instanceof Module) {
-                if (recreate) {
-                    instance.destroy();
-                }
-                else {
-                    return instance;
-                }
+    static create(element, recreate = false) {
+        const instance = Module.getInstance(element);
+        if (instance) {
+            if (recreate) {
+                instance.destroy();
+            }
+            else {
+                return instance;
             }
         }
-        return new this(options);
+        const name = this.getName();
+        element[name] = new this(element);
+        return element[name];
     }
     /**
-     * Gets the CSS selector for finding elements with the module's data attribute.
+     * Finds and returns the module element associated with the given HTML element within the module tree.
      *
-     * @returns {string} The CSS selector.
+     * @param {HTMLElement} element - The HTML element to search for within the module tree.
+     * @returns {null | HTMLElement} The module element associated with the given HTML element if found, or null if not found.
      */
-    static getModuleSelector() {
-        return `[data-module-${this.name}]`;
+    static findModuleElementInTree(element) {
+        const selector = this.getModuleSelector();
+        const foundElement = findParent(element, selector);
+        if (!foundElement)
+            return null;
+        if (!(foundElement instanceof HTMLElement))
+            return null;
+        return foundElement;
+    }
+    /**
+     * Finds and returns the module associated with the given HTML element within the module tree.
+     *
+     * @param {HTMLElement} element - The HTML element to search for within the module tree.
+     * @returns {null | M} The module associated with the given HTML element if found, or null if not found.
+     * @template M - The type of module to be returned.
+     */
+    static findModuleInTree(element) {
+        const moduleElement = this.findModuleElementInTree(element);
+        if (!moduleElement)
+            return null;
+        return this.getInstance(moduleElement);
     }
 }
 

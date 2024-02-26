@@ -1,3 +1,4 @@
+import { pascalToSnake } from "./utils";
 /**
  * The main application class that manages modules.
  *
@@ -10,11 +11,13 @@ export class App {
      * @readonly
      */
     modules;
+    mutationObserver;
     /**
      * Instances of modules associated with HTML elements.
      * @private
      */
     moduleInstances;
+    static instance;
     /**
      * Creates an instance of the App class.
      *
@@ -22,62 +25,103 @@ export class App {
      * @param {AppOptions} options - The options for configuring the App instance.
      */
     constructor(options) {
+        App.instance = this;
         this.modules = options.modules;
         this.moduleInstances = new Map();
+        this.mutationObserver = new MutationObserver(this.mutationCallback.bind(this));
+        this.mutationObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+    }
+    init(context) {
+        this.initModules(context);
+    }
+    destroy(context) {
+        this.mutationObserver.disconnect();
+        this.destroyModules(context);
+    }
+    /**
+     * Initializes and destroys modules within a specified context or the entire document.
+     *
+     * @param {ParentNode} [context] - The context in which to initialize modules.
+     */
+    update(context) {
+        this.destroyModules(context);
+        this.initModules(context);
     }
     /**
      * Initialize modules within a specified context or the entire document.
      *
-     * @param {HTMLElement} [context] - The context in which to initialize modules.
-     * @memberof App
+     * @param {ParentNode} [context] - The context in which to initialize modules.
      */
-    init(context) {
+    initModules(context) {
         if (!context) {
             context = document.documentElement;
         }
-        this.modules.forEach((moduleClass) => {
-            const moduleAttribute = `data-module-${moduleClass.name}`;
-            const $targets = Array.from(context.querySelectorAll(`[${moduleAttribute}]`));
-            if (context?.hasAttribute(moduleAttribute)) {
-                $targets.push(context);
+        for (const module of this.modules) {
+            const name = pascalToSnake(module.name);
+            const moduleAttribute = `data-module-${name}`;
+            const elements = Array.from(context.querySelectorAll(`[${moduleAttribute}]`));
+            if (context instanceof HTMLElement && context.hasAttribute(moduleAttribute)) {
+                elements.push(context);
             }
-            for (const element of $targets) {
-                if (element.dataset.dependsOn) {
+            for (const element of elements) {
+                if (element.dataset.ignoreModule)
                     continue;
-                }
-                const module = moduleClass.create({ el: element }, true);
-                module.init();
+                const moduleInstance = module.create(element, true);
+                moduleInstance.init();
                 this.moduleInstances.set(element, {
                     ...this.moduleInstances.get(element) || {},
-                    [moduleClass.name]: module,
+                    [name]: moduleInstance,
                 });
             }
-        });
+        }
     }
     /**
      * Destroy modules within a specified context or the entire document.
      *
-     * @param {HTMLElement} [context] - The context in which to destroy modules.
+     * @param {ParentNode} [context] - The context in which to destroy modules.
      * @memberof App
      */
-    destroy(context) {
+    destroyModules(context) {
         for (const [element, instances] of this.moduleInstances.entries()) {
             if (context && context !== element && !context.contains(element))
                 continue;
             Object.values(instances).forEach((instance) => {
                 instance.destroy();
+                this.unregisterModuleInstance(element, instance);
             });
-            this.moduleInstances.delete(element);
         }
     }
-    /**
-     * Update modules within a specified context or the entire document.
-     *
-     * @param {HTMLElement} [context] - The context in which to update modules.
-     * @memberof App
-     */
-    update(context) {
-        this.destroy(context);
-        this.init(context);
+    mutationCallback(mutations) {
+        mutations.forEach((mutation) => {
+            for (const node of mutation.removedNodes) {
+                if (node.nodeType !== Node.ELEMENT_NODE)
+                    continue;
+                if (!(node instanceof HTMLElement))
+                    continue;
+                this.destroyModules(node);
+            }
+            if (!(mutation.target instanceof HTMLElement))
+                return;
+            this.initModules(mutation.target);
+        });
+    }
+    unregisterModuleInstance(element, instance) {
+        let instances = this.moduleInstances.get(element);
+        if (!instances)
+            return;
+        if (instance) {
+            delete instances[instance.name];
+        }
+        else {
+            instances = {};
+        }
+        if (Object.keys(instances).length) {
+            this.moduleInstances.set(element, instances);
+            return;
+        }
+        this.moduleInstances.delete(element);
     }
 }
