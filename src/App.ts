@@ -26,7 +26,6 @@ export class App {
      * @readonly
      */
     private readonly modules: ModuleClassArray;
-    private readonly mutationObserver: MutationObserver;
 
     /**
      * Instances of modules associated with HTML elements.
@@ -49,35 +48,6 @@ export class App {
         this.modules = options.modules;
 
         this.moduleInstances = new Map();
-
-        this.mutationObserver = new MutationObserver(this.mutationCallback.bind(this));
-    }
-
-
-
-    init(context?: ParentNode) {
-        this.initModules(context);
-
-        this.mutationObserver.observe(document.body, {
-            childList: true,
-            subtree: true,
-        });
-    }
-
-    destroy(context?: ParentNode) {
-        this.mutationObserver.disconnect();
-
-        this.destroyModules(context);
-    }
-
-    /**
-     * Initializes and destroys modules within a specified context or the entire document.
-     *
-     * @param {ParentNode} [context] - The context in which to initialize modules.
-     */
-    update(context?: ParentNode) {
-        this.destroyModules(context);
-        this.initModules(context);
     }
 
 
@@ -87,7 +57,7 @@ export class App {
      *
      * @param {ParentNode} [context] - The context in which to initialize modules.
      */
-    private initModules(context?: ParentNode) {
+    init(context?: ParentNode) {
         if (!context) {
             context = document.documentElement;
         }
@@ -102,8 +72,6 @@ export class App {
             }
 
             for (const element of elements) {
-                if (element.dataset.ignoreModule) continue;
-
                 const moduleInstance = module.create(element);
                 moduleInstance.init();
 
@@ -121,7 +89,7 @@ export class App {
      * @param {ParentNode} [context] - The context in which to destroy modules.
      * @memberof App
      */
-    private destroyModules(context?: ParentNode) {
+    destroy(context?: ParentNode) {
         for (const [element, instances] of this.moduleInstances.entries()) {
             if (context && context !== element && !context.contains(element)) continue;
 
@@ -132,24 +100,17 @@ export class App {
         }
     }
 
-
-
-    private mutationCallback(mutations: MutationRecord[]): void
-    {
-        mutations.forEach((mutation) => {
-            for (const node of mutation.removedNodes) {
-                if (node.nodeType !== Node.ELEMENT_NODE) continue;
-
-                if (!(node instanceof HTMLElement)) continue;
-
-                this.destroyModules(node);
-            }
-
-            if (!(mutation.target instanceof HTMLElement)) return;
-
-            this.initModules(mutation.target);
-        });
+    /**
+     * Initializes and destroys modules within a specified context or the entire document.
+     *
+     * @param {ParentNode} [context] - The context in which to initialize modules.
+     */
+    update(context?: ParentNode) {
+        this.destroy(context);
+        this.init(context);
     }
+
+
 
     private unregisterModuleInstance(element: HTMLElement, instance?: Module): void
     {

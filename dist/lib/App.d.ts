@@ -16,7 +16,6 @@ export declare class App {
      * @readonly
      */
     private readonly modules;
-    private readonly mutationObserver;
     /**
      * Instances of modules associated with HTML elements.
      * @private
@@ -30,7 +29,18 @@ export declare class App {
      * @param {AppOptions} options - The options for configuring the App instance.
      */
     constructor(options: AppOptions);
+    /**
+     * Initialize modules within a specified context or the entire document.
+     *
+     * @param {ParentNode} [context] - The context in which to initialize modules.
+     */
     init(context?: ParentNode): void;
+    /**
+     * Destroy modules within a specified context or the entire document.
+     *
+     * @param {ParentNode} [context] - The context in which to destroy modules.
+     * @memberof App
+     */
     destroy(context?: ParentNode): void;
     /**
      * Initializes and destroys modules within a specified context or the entire document.
@@ -38,19 +48,5 @@ export declare class App {
      * @param {ParentNode} [context] - The context in which to initialize modules.
      */
     update(context?: ParentNode): void;
-    /**
-     * Initialize modules within a specified context or the entire document.
-     *
-     * @param {ParentNode} [context] - The context in which to initialize modules.
-     */
-    private initModules;
-    /**
-     * Destroy modules within a specified context or the entire document.
-     *
-     * @param {ParentNode} [context] - The context in which to destroy modules.
-     * @memberof App
-     */
-    private destroyModules;
-    private mutationCallback;
     private unregisterModuleInstance;
 }
