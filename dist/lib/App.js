@@ -1,4 +1,4 @@
-import { pascalToSnake } from "./utils";
+import { pascalToKebab } from "./utils";
 /**
  * The main application class that manages modules.
  *
@@ -60,7 +60,7 @@ export class App {
             context = document.documentElement;
         }
         for (const module of this.modules) {
-            const name = pascalToSnake(module.name);
+            const name = pascalToKebab(module.name);
             const moduleAttribute = `data-module-${name}`;
             const elements = Array.from(context.querySelectorAll(`[${moduleAttribute}]`));
             if (context instanceof HTMLElement && context.hasAttribute(moduleAttribute)) {

@@ -1,11 +1,11 @@
 /**
- * Converts a string from PascalCase to snake_case.
+ * Converts a string from PascalCase to kebab-case.
  *
  * @param {string} pascalString - The string to be converted.
  * @returns {string} The converted string in snake_case.
  */
-export function pascalToSnake(pascalString) {
-    return pascalString.replace(/[A-Z]/g, (match, offset) => (offset ? '_' : '') + match.toLowerCase());
+export function pascalToKebab(pascalString) {
+    return pascalString.replace(/[A-Z]/g, (match, offset) => (offset ? '-' : '') + match.toLowerCase());
 }
 /**
  * Binds methods of an object to the object itself.

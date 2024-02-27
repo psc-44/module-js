@@ -1,4 +1,4 @@
-import {bind, findParent, getSelectorFilteredEventListener, pascalToSnake} from "./utils";
+import {bind, findParent, getSelectorFilteredEventListener, pascalToKebab} from "./utils";
 
 
 
@@ -38,7 +38,7 @@ export class Module {
      */
     constructor(el: HTMLElement)
     {
-        this._name = pascalToSnake(this.constructor.name);
+        this._name = pascalToKebab(this.constructor.name);
         this._moduleAttribute = `data-${this._name}`;
         this._eventListeners = new Map();
 
@@ -384,7 +384,7 @@ export class Module {
      */
     static getName(): string
     {
-        return pascalToSnake(this.name);
+        return pascalToKebab(this.name);
     }
 
     /**

@@ -1,13 +1,13 @@
 'use strict';
 
 /**
- * Converts a string from PascalCase to snake_case.
+ * Converts a string from PascalCase to kebab-case.
  *
  * @param {string} pascalString - The string to be converted.
  * @returns {string} The converted string in snake_case.
  */
-function pascalToSnake(pascalString) {
-    return pascalString.replace(/[A-Z]/g, (match, offset) => (offset ? '_' : '') + match.toLowerCase());
+function pascalToKebab(pascalString) {
+    return pascalString.replace(/[A-Z]/g, (match, offset) => (offset ? '-' : '') + match.toLowerCase());
 }
 /**
  * Binds methods of an object to the object itself.
@@ -184,7 +184,7 @@ class App {
             context = document.documentElement;
         }
         for (const module of this.modules) {
-            const name = pascalToSnake(module.name);
+            const name = pascalToKebab(module.name);
             const moduleAttribute = `data-module-${name}`;
             const elements = Array.from(context.querySelectorAll(`[${moduleAttribute}]`));
             if (context instanceof HTMLElement && context.hasAttribute(moduleAttribute)) {
@@ -275,7 +275,7 @@ class Module {
      * the module's basic structure and functionality, facilitating smooth reinitialization when necessary.
      */
     constructor(el) {
-        this._name = pascalToSnake(this.constructor.name);
+        this._name = pascalToKebab(this.constructor.name);
         this._moduleAttribute = `data-${this._name}`;
         this._eventListeners = new Map();
         this.el = el;
@@ -542,7 +542,7 @@ class Module {
      * @returns {string}
      */
     static getName() {
-        return pascalToSnake(this.name);
+        return pascalToKebab(this.name);
     }
     /**
      * Returns the CSS selector of the module's data attribute.
@@ -616,4 +616,4 @@ exports.findParent = findParent;
 exports.getEventFilteredEventListener = getEventFilteredEventListener;
 exports.getSelectorFilteredEventListener = getSelectorFilteredEventListener;
 exports.hasParent = hasParent;
-exports.pascalToSnake = pascalToSnake;
+exports.pascalToKebab = pascalToKebab;

@@ -1,5 +1,5 @@
 import {Module} from "./Module";
-import {pascalToSnake} from "./utils";
+import {pascalToKebab} from "./utils";
 
 
 
@@ -93,7 +93,7 @@ export class App {
         }
 
         for (const module of this.modules) {
-            const name = pascalToSnake(module.name);
+            const name = pascalToKebab(module.name);
             const moduleAttribute = `data-module-${name}`;
             const elements = Array.from(context.querySelectorAll<HTMLElement>(`[${moduleAttribute}]`));
 

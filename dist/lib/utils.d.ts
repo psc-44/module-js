@@ -1,10 +1,10 @@
 /**
- * Converts a string from PascalCase to snake_case.
+ * Converts a string from PascalCase to kebab-case.
  *
  * @param {string} pascalString - The string to be converted.
  * @returns {string} The converted string in snake_case.
  */
-export declare function pascalToSnake(pascalString: string): string;
+export declare function pascalToKebab(pascalString: string): string;
 /**
  * Binds methods of an object to the object itself.
  *

@@ -1,4 +1,4 @@
-import { bind, findParent, getSelectorFilteredEventListener, pascalToSnake } from "./utils";
+import { bind, findParent, getSelectorFilteredEventListener, pascalToKebab } from "./utils";
 /**
  * Base class for creating modular components with event handling.
  */
@@ -24,7 +24,7 @@ export class Module {
      * the module's basic structure and functionality, facilitating smooth reinitialization when necessary.
      */
     constructor(el) {
-        this._name = pascalToSnake(this.constructor.name);
+        this._name = pascalToKebab(this.constructor.name);
         this._moduleAttribute = `data-${this._name}`;
         this._eventListeners = new Map();
         this.el = el;
@@ -291,7 +291,7 @@ export class Module {
      * @returns {string}
      */
     static getName() {
-        return pascalToSnake(this.name);
+        return pascalToKebab(this.name);
     }
     /**
      * Returns the CSS selector of the module's data attribute.
