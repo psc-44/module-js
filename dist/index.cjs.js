@@ -1,73 +1,5 @@
 'use strict';
 
-class EventEmitter {
-    constructor() {
-        this._events = {};
-    }
-    /**
-     * Returns the number of registered events.
-     *
-     * @return {number}
-     */
-    get eventsCount() {
-        return Object.keys(this._events).length;
-    }
-    /**
-     * Deletes all events.
-     */
-    clearEvents() {
-        this._events = {};
-    }
-    /**
-     * Adds the event callback function to the event.
-     *
-     * @param eventName {string} - The eventName of the event.
-     * @param callback {Listener} - The event callback function.
-     */
-    on(eventName, callback) {
-        if (!this.eventExists(eventName)) {
-            this._events[eventName] = new Set();
-        }
-        this._events[eventName].add(callback);
-        return () => this.off(eventName, callback);
-    }
-    /**
-     * Removes the event callback function from the event.
-     *
-     * @param eventName {string} - The eventName of the event.
-     * @param callback {Listener} - The event callback function.
-     */
-    off(eventName, callback) {
-        if (!this.eventExists(eventName)) {
-            return;
-        }
-        this._events[eventName].delete(callback);
-    }
-    /**
-     * Calls all callbacks for the event.
-     *
-     * @param eventName {string} - The eventName of the event.
-     * @param data {object | null} - The data passed on to the callbacks.
-     */
-    emit(eventName, data = null) {
-        if (!this.eventExists(eventName)) {
-            return;
-        }
-        this._events[eventName].forEach((callback) => {
-            callback.call(null, data);
-        });
-    }
-    /**
-     * Returns whether the event exists.
-     *
-     * @param eventName {string} - The eventName of the event.
-     * @return {boolean}
-     */
-    eventExists(eventName) {
-        return !!this._events[eventName];
-    }
-}
-
 /**
  * Converts a string from PascalCase to snake_case.
  *
@@ -192,9 +124,136 @@ function getSelectorFilteredEventListener(selector, listener) {
 }
 
 /**
+ * The main application class that manages modules.
+ *
+ * @class
+ */
+class App {
+    /**
+     * The array of available module classes.
+     * @private
+     * @readonly
+     */
+    modules;
+    mutationObserver;
+    /**
+     * Instances of modules associated with HTML elements.
+     * @private
+     */
+    moduleInstances;
+    static instance;
+    /**
+     * Creates an instance of the App class.
+     *
+     * @constructor
+     * @param {AppOptions} options - The options for configuring the App instance.
+     */
+    constructor(options) {
+        App.instance = this;
+        this.modules = options.modules;
+        this.moduleInstances = new Map();
+        this.mutationObserver = new MutationObserver(this.mutationCallback.bind(this));
+    }
+    init(context) {
+        this.initModules(context);
+        this.mutationObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+    }
+    destroy(context) {
+        this.mutationObserver.disconnect();
+        this.destroyModules(context);
+    }
+    /**
+     * Initializes and destroys modules within a specified context or the entire document.
+     *
+     * @param {ParentNode} [context] - The context in which to initialize modules.
+     */
+    update(context) {
+        this.destroyModules(context);
+        this.initModules(context);
+    }
+    /**
+     * Initialize modules within a specified context or the entire document.
+     *
+     * @param {ParentNode} [context] - The context in which to initialize modules.
+     */
+    initModules(context) {
+        if (!context) {
+            context = document.documentElement;
+        }
+        for (const module of this.modules) {
+            const name = pascalToSnake(module.name);
+            const moduleAttribute = `data-module-${name}`;
+            const elements = Array.from(context.querySelectorAll(`[${moduleAttribute}]`));
+            if (context instanceof HTMLElement && context.hasAttribute(moduleAttribute)) {
+                elements.push(context);
+            }
+            for (const element of elements) {
+                if (element.dataset.ignoreModule)
+                    continue;
+                const moduleInstance = module.create(element);
+                moduleInstance.init();
+                this.moduleInstances.set(element, {
+                    ...this.moduleInstances.get(element) || {},
+                    [name]: moduleInstance,
+                });
+            }
+        }
+    }
+    /**
+     * Destroy modules within a specified context or the entire document.
+     *
+     * @param {ParentNode} [context] - The context in which to destroy modules.
+     * @memberof App
+     */
+    destroyModules(context) {
+        for (const [element, instances] of this.moduleInstances.entries()) {
+            if (context && context !== element && !context.contains(element))
+                continue;
+            Object.values(instances).forEach((instance) => {
+                instance.destroy();
+                this.unregisterModuleInstance(element, instance);
+            });
+        }
+    }
+    mutationCallback(mutations) {
+        mutations.forEach((mutation) => {
+            for (const node of mutation.removedNodes) {
+                if (node.nodeType !== Node.ELEMENT_NODE)
+                    continue;
+                if (!(node instanceof HTMLElement))
+                    continue;
+                this.destroyModules(node);
+            }
+            if (!(mutation.target instanceof HTMLElement))
+                return;
+            this.initModules(mutation.target);
+        });
+    }
+    unregisterModuleInstance(element, instance) {
+        let instances = this.moduleInstances.get(element);
+        if (!instances)
+            return;
+        if (instance) {
+            delete instances[instance.name];
+        }
+        else {
+            instances = {};
+        }
+        if (Object.keys(instances).length) {
+            this.moduleInstances.set(element, instances);
+            return;
+        }
+        this.moduleInstances.delete(element);
+    }
+}
+
+/**
  * Base class for creating modular components with event handling.
  */
-class Module extends EventEmitter {
+class Module {
     _name;
     _moduleAttribute;
     _eventListeners;
@@ -216,7 +275,6 @@ class Module extends EventEmitter {
      * the module's basic structure and functionality, facilitating smooth reinitialization when necessary.
      */
     constructor(el) {
-        super();
         this._name = pascalToSnake(this.constructor.name);
         this._moduleAttribute = `data-${this._name}`;
         this._eventListeners = new Map();
@@ -240,7 +298,6 @@ class Module extends EventEmitter {
      * Destructor method for the module. Removes all event listeners.
      */
     destroy() {
-        this.clearEvents();
         this._eventListeners.forEach((listeners, element) => {
             listeners.forEach((listener, eventName) => {
                 element.removeEventListener(eventName, listener);
@@ -509,7 +566,7 @@ class Module extends EventEmitter {
      * @returns {M} The module instance.
      */
     static create(element, recreate = false) {
-        const instance = Module.getInstance(element);
+        const instance = this.getInstance(element);
         if (instance) {
             if (recreate) {
                 instance.destroy();
@@ -549,143 +606,6 @@ class Module extends EventEmitter {
         if (!moduleElement)
             return null;
         return this.getInstance(moduleElement);
-    }
-}
-
-/**
- * The main application class that manages modules.
- *
- * @class
- */
-class App {
-    /**
-     * The array of available module classes.
-     * @private
-     * @readonly
-     */
-    modules;
-    mutationObserver;
-    /**
-     * Instances of modules associated with HTML elements.
-     * @private
-     */
-    moduleInstances;
-    static instance;
-    /**
-     * Creates an instance of the App class.
-     *
-     * @constructor
-     * @param {AppOptions} options - The options for configuring the App instance.
-     */
-    constructor(options) {
-        App.instance = this;
-        this.modules = options.modules;
-        this.moduleInstances = new Map();
-        this.mutationObserver = new MutationObserver(this.mutationCallback.bind(this));
-    }
-    init(context) {
-        this.initModules(context);
-        this.mutationObserver.observe(document.body, {
-            childList: true,
-            subtree: true,
-        });
-    }
-    destroy(context) {
-        this.mutationObserver.disconnect();
-        this.destroyModules(context);
-    }
-    /**
-     * Initializes and destroys modules within a specified context or the entire document.
-     *
-     * @param {ParentNode} [context] - The context in which to initialize modules.
-     */
-    update(context) {
-        this.destroyModules(context);
-        this.initModules(context);
-    }
-    /**
-     * Initialize modules within a specified context or the entire document.
-     *
-     * @param {ParentNode} [context] - The context in which to initialize modules.
-     */
-    initModules(context) {
-        if (!context) {
-            context = document.documentElement;
-        }
-        for (const module of this.modules) {
-            const name = pascalToSnake(module.name);
-            const moduleAttribute = `data-module-${name}`;
-            const elements = Array.from(context.querySelectorAll(`[${moduleAttribute}]`));
-            if (context instanceof HTMLElement && context.hasAttribute(moduleAttribute)) {
-                elements.push(context);
-            }
-            for (const element of elements) {
-                if (element.dataset.ignoreModule)
-                    continue;
-                if (this.getRegisteredModuleInstance(element, name))
-                    continue;
-                const moduleInstance = module.create(element, true);
-                moduleInstance.init();
-                this.moduleInstances.set(element, {
-                    ...this.moduleInstances.get(element) || {},
-                    [name]: moduleInstance,
-                });
-            }
-        }
-    }
-    /**
-     * Destroy modules within a specified context or the entire document.
-     *
-     * @param {ParentNode} [context] - The context in which to destroy modules.
-     * @memberof App
-     */
-    destroyModules(context) {
-        for (const [element, instances] of this.moduleInstances.entries()) {
-            if (context && context !== element && !context.contains(element))
-                continue;
-            Object.values(instances).forEach((instance) => {
-                instance.destroy();
-                this.unregisterModuleInstance(element, instance);
-            });
-        }
-    }
-    mutationCallback(mutations) {
-        mutations.forEach((mutation) => {
-            for (const node of mutation.removedNodes) {
-                if (node.nodeType !== Node.ELEMENT_NODE)
-                    continue;
-                if (!(node instanceof HTMLElement))
-                    continue;
-                this.destroyModules(node);
-            }
-            if (!(mutation.target instanceof HTMLElement))
-                return;
-            this.initModules(mutation.target);
-        });
-    }
-    unregisterModuleInstance(element, instance) {
-        let instances = this.moduleInstances.get(element);
-        if (!instances)
-            return;
-        if (instance) {
-            delete instances[instance.name];
-        }
-        else {
-            instances = {};
-        }
-        if (Object.keys(instances).length) {
-            this.moduleInstances.set(element, instances);
-            return;
-        }
-        this.moduleInstances.delete(element);
-    }
-    getRegisteredModuleInstance(element, name) {
-        const instances = this.moduleInstances.get(element);
-        if (!instances)
-            return null;
-        if (name && instances.hasOwnProperty(name) && instances[name] instanceof Module)
-            return instances[name];
-        return null;
     }
 }
 

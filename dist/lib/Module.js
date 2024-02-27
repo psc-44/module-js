@@ -1,9 +1,8 @@
-import { EventEmitter } from "@psc-44/event-emitter";
 import { bind, findParent, getSelectorFilteredEventListener, pascalToSnake } from "./utils";
 /**
  * Base class for creating modular components with event handling.
  */
-export class Module extends EventEmitter {
+export class Module {
     _name;
     _moduleAttribute;
     _eventListeners;
@@ -25,7 +24,6 @@ export class Module extends EventEmitter {
      * the module's basic structure and functionality, facilitating smooth reinitialization when necessary.
      */
     constructor(el) {
-        super();
         this._name = pascalToSnake(this.constructor.name);
         this._moduleAttribute = `data-${this._name}`;
         this._eventListeners = new Map();
@@ -49,7 +47,6 @@ export class Module extends EventEmitter {
      * Destructor method for the module. Removes all event listeners.
      */
     destroy() {
-        this.clearEvents();
         this._eventListeners.forEach((listeners, element) => {
             listeners.forEach((listener, eventName) => {
                 element.removeEventListener(eventName, listener);
@@ -318,7 +315,7 @@ export class Module extends EventEmitter {
      * @returns {M} The module instance.
      */
     static create(element, recreate = false) {
-        const instance = Module.getInstance(element);
+        const instance = this.getInstance(element);
         if (instance) {
             if (recreate) {
                 instance.destroy();

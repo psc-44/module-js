@@ -1,9 +1,8 @@
-import { EventEmitter } from "@psc-44/event-emitter";
 export type ModuleElements = Record<string, (HTMLElement | HTMLElement[])>;
 /**
  * Base class for creating modular components with event handling.
  */
-export declare class Module extends EventEmitter {
+export declare class Module {
     private readonly _name;
     private readonly _moduleAttribute;
     private readonly _eventListeners;

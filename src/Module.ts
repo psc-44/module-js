@@ -1,4 +1,3 @@
-import {EventEmitter} from "@psc-44/event-emitter";
 import {bind, findParent, getSelectorFilteredEventListener, pascalToSnake} from "./utils";
 
 
@@ -10,7 +9,7 @@ export type ModuleElements = Record<string, (HTMLElement | HTMLElement[])>;
 /**
  * Base class for creating modular components with event handling.
  */
-export class Module extends EventEmitter {
+export class Module {
 
     private readonly _name: string;
     private readonly _moduleAttribute: string;
@@ -39,8 +38,6 @@ export class Module extends EventEmitter {
      */
     constructor(el: HTMLElement)
     {
-        super();
-
         this._name = pascalToSnake(this.constructor.name);
         this._moduleAttribute = `data-${this._name}`;
         this._eventListeners = new Map();
@@ -71,8 +68,6 @@ export class Module extends EventEmitter {
      */
     destroy()
     {
-        this.clearEvents();
-
         this._eventListeners.forEach((listeners, element) => {
             listeners.forEach((listener, eventName) => {
                 element.removeEventListener(eventName, listener);

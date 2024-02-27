@@ -54,7 +54,7 @@ export class MyModule extends Module {
     }
 	
     init() {
-        this.addEventListener("button", () => {
+        this.addEventListener("button", "click", () => {
             console.log(this.getData("say")); // Output: "Hello world"
         });
     }
@@ -87,17 +87,228 @@ Set these option in your module sub class.
 | `this.$parent("selector"[, context, useModuleSelector])`                      | Finds the first parent element matching the selector within the module's or specified context. <br>See the note on `selector` in `this.$`.                                                                                                                                                       | `this.$parent("wrapper")`                                                                                     |
 | `this.getData(name[, context])`                                               | Retrieves data attribute value from the module's or context element.                                                                                                                                                                                                                             | `this.getData("repeat-animation")`                                                                            |
 | `this.setData(name, value[, context])`                                        | Sets the data attribute value on the module's or context element.                                                                                                                                                                                                                                | `this.setData("count", "5")`                                                                                  |
-| `Module.getModuleSelector()`                                                  | Returns the CSS selector of the module's data attribute.                                                                                                                                                                                                                                         | `MyModule.getModuleSelector()`                                                                                |
-| `Module.create(element[, recreate = false])`                                  | Creates a new instance of the module with the provided options. If an instance already exists for the element, it returns the existing instance unless `recreate` is true.                                                                                                                       | `MyModule.create(element)`                                                                                    |
-| `Module.findModuleInTree(element)`                                            | Finds and returns the module associated with the given HTML element within the module tree.                                                                                                                                                                                                      | `MyModule.findModuleInTree(element)`                                                                          |
+| `static` `getModuleSelector()`                                                | Returns the CSS selector of the module's data attribute.                                                                                                                                                                                                                                         | `MyModule.getModuleSelector()`                                                                                |
+| `static` `create(element[, recreate = false])`                                | Creates a new instance of the module with the provided options. If an instance already exists for the element, it returns the existing instance unless `recreate` is true.                                                                                                                       | `MyModule.create(element)`                                                                                    |
+| `static` `findModuleInTree(element)`                                          | Finds and returns the module associated with the given HTML element within the module tree.                                                                                                                                                                                                      | `MyModule.findModuleInTree(element)`                                                                          |
 
 
 ## App Methods
-| Method                    | Description                                                           | Example          |
-|---------------------------|-----------------------------------------------------------------------|------------------|
-| `this.init([context])`    | Initialize modules within a specified context or the entire document. | `this.init()`    |
-| `this.destroy([context])` | Destroy modules within a specified context or the entire document.    | `this.destroy()` |
-| `this.update([context])`  | Update modules within a specified context or the entire document.     | `this.update()`  |
+You can call these functions from everywhere using the static `instance` property on the `App` class.
+
+| Method                    | Description                                                           | Example                                |
+|---------------------------|-----------------------------------------------------------------------|----------------------------------------|
+| `this.init([context])`    | Initialize modules within a specified context or the entire document. | `this.init()` or `App.instance.init()` |
+| `this.destroy([context])` | Destroy modules within a specified context or the entire document.    | `this.destroy()`                       |
+| `this.update([context])`  | Update modules within a specified context or the entire document.     | `this.update()`                        |
+
+
+## Examples
+### Dialog example
+```html
+<dialog class="data-module-dialog">
+    <h2 data-dialog="label">
+        Dialog
+    </h2>
+    
+    <button data-dialog="accept">
+        Accept
+    </button>
+    <button data-dialog="decline">
+        Decline
+    </button>
+</dialog>
+```
+```js
+import { Module } from "@psc-44/module-js";
+
+export class Dialog extends Module {
+
+    constructor(options) {
+        super(options);
+    }
+
+    init() {
+        this.addEventListener("accept", "click", this.accept);
+        this.addEventListener("decline", "click", this.close);
+        
+        this.open();
+    }
+    
+    open() {
+        this.el.classList.add("is-open");
+    }
+    
+    accept() {
+        this.$("label").textContent = "Thank you!";
+        this.$("accept").style.display = "none";
+        this.$("decline").textContent = "Close";
+    }
+    
+    close() {
+        this.el.classList.remove("is-open");
+    }
+}
+```
+
+### Accordion example
+```html
+<div data-module-accordion data-accordion-open="true">
+    <section data-accordion="section">
+        <header data-accordion="header">
+            <h2>
+                Title
+            </h2>
+        </header>
+        <div data-accordion="main">
+            <p>
+                Content
+            </p>
+        </div>
+    </section>
+    <section data-accordion="section">
+        <header data-accordion="header">
+            <h2>
+                Title
+            </h2>
+        </header>
+        <div data-accordion="main">
+            <p>
+                Content
+            </p>
+        </div>
+    </section>
+</div>
+```
+```js
+import { Module } from "@psc-44/module-js";
+
+export class Accordion extends Module {
+
+    constructor(options) {
+        super(options);
+    }
+
+    init() {
+        this.addEventListener("header", "click", this.toggleSection);
+        
+        if (this.getData("open")) {
+            this.$("section").classList.add("is-open");
+        }
+    }
+
+    toggleSection(event) {
+        const target = event.currentTarget;
+        const section = this.$parent("section", target);
+
+        if (section.classList.contains("is-open")) {
+            section.classList.remove("is-open");
+        } else {
+            this.$("section.is-open").classList.remove("is-open");
+            section.classList.add("is-open");
+            Scroll.instance.scrollTo(this.el); // Add your scroll to logic here
+        }
+    }
+}
+```
+
+### Advanced accordion example
+```html
+<div data-module-accordion-group>
+    <section data-module-accordion class="is-open">
+        <header data-accordion="header">
+            <h2>
+                Title
+            </h2>
+        </header>
+        <div data-accordion="main">
+            <p>
+                Content
+            </p>
+        </div>
+    </section>
+    <section data-module-accordion>
+        <header data-accordion="header">
+            <h2>
+                Title
+            </h2>
+        </header>
+        <div data-accordion="main">
+            <p>
+                Content
+            </p>
+        </div>
+    </section>
+</div>
+```
+```js
+import { Module } from "@psc-44/module-js";
+
+export class Accordion extends Module {
+
+    constructor(options) {
+        super(options);
+    }
+
+    init() {
+        this.addEventListener(this.el, "click", this.toggle);
+    }
+    
+    open() {
+        this.el.classList.add("is-open");
+        this.dispatchDomEvent("open");
+        Scroll.instance.scrollTo(this.el);
+    }
+    
+    close() {
+        this.el.classList.remove("is-open");
+    }
+    
+    isOpen() {
+        return this.el.classList.contains("is-open");
+    }
+    
+    toggle() {
+        if (this.isOpen()) {
+            this.close();
+            return;
+        }
+        
+        this.open();
+    }
+}
+```
+```js
+import { Module } from "@psc-44/module-js";
+
+export class AccordionGroup extends Module {
+
+    constructor(options) {
+        super(options);
+    }
+
+    init() {
+        this.$items = this.$all(Accordion.getModuleSelector());
+        
+        this.accordions = this.$items.map(($item) => {
+            const instance = Accorion.create($item);
+            this.addEventListener(instance.el, "open", this.onAccordionOpen);
+            return instance;
+        });
+    }
+    
+    destroy() {
+        this.accordions.forEach((accordion) => accordion.destroy());
+    }
+    
+    onAccordionOpen(event) {
+        this.accordions.forEach((accordion) => {
+            if (accordion === event.detail.module) return;
+            
+            accordion.close();
+        });
+    }
+}
+```
 
 
 ## Credits

@@ -1,4 +1,3 @@
-import { Module } from "./Module";
 import { pascalToSnake } from "./utils";
 /**
  * The main application class that manages modules.
@@ -70,9 +69,7 @@ export class App {
             for (const element of elements) {
                 if (element.dataset.ignoreModule)
                     continue;
-                if (this.getRegisteredModuleInstance(element, name))
-                    continue;
-                const moduleInstance = module.create(element, true);
+                const moduleInstance = module.create(element);
                 moduleInstance.init();
                 this.moduleInstances.set(element, {
                     ...this.moduleInstances.get(element) || {},
@@ -126,13 +123,5 @@ export class App {
             return;
         }
         this.moduleInstances.delete(element);
-    }
-    getRegisteredModuleInstance(element, name) {
-        const instances = this.moduleInstances.get(element);
-        if (!instances)
-            return null;
-        if (name && instances.hasOwnProperty(name) && instances[name] instanceof Module)
-            return instances[name];
-        return null;
     }
 }
