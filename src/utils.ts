@@ -127,7 +127,8 @@ export function getEventFilteredEventListener(element: ParentNode, listener: Eve
         if (!(event.target instanceof Element)) return;
 
         if (element === event.currentTarget || hasParent(element, event.target))   {
-            listener({...event, currentTarget: element});
+            Object.defineProperty(event, "currentTarget", { value: element });
+            listener(event);
         }
     };
 }
@@ -144,8 +145,11 @@ export function getSelectorFilteredEventListener(selector: string, listener: Eve
     return (event) => {
         if (!(event.target instanceof Element)) return;
 
-        if (!findParent(event.target, selector)) return;
+        const $parent = findParent(event.target, selector);
+        if (!$parent) return;
 
-        return listener({...event, currentTarget: event.target});
+        Object.defineProperty(event, "currentTarget", { value: $parent });
+
+        return listener(event);
     };
 }

@@ -102,7 +102,8 @@ function getEventFilteredEventListener(element, listener) {
         if (!(event.target instanceof Element))
             return;
         if (element === event.currentTarget || hasParent(element, event.target)) {
-            listener({ ...event, currentTarget: element });
+            Object.defineProperty(event, "currentTarget", { value: element });
+            listener(event);
         }
     };
 }
@@ -117,9 +118,11 @@ function getSelectorFilteredEventListener(selector, listener) {
     return (event) => {
         if (!(event.target instanceof Element))
             return;
-        if (!findParent(event.target, selector))
+        const $parent = findParent(event.target, selector);
+        if (!$parent)
             return;
-        return listener({ ...event, currentTarget: event.target });
+        Object.defineProperty(event, "currentTarget", { value: $parent });
+        return listener(event);
     };
 }
 
@@ -528,13 +531,12 @@ class Module {
         return element.hasOwnProperty(name) ? element[name] : null;
     }
     /**
-     * Creates a new instance of the module with the provided options.
-     * If an instance already exists for the element, it returns the existing instance unless `recreate` is true.
+     * Creates a new instance of a module associated with the given HTML element or retrieves an existing instance if available.
      *
-     * @template M - The type of the Module.
-     * @param {HTMLElement} element - Options for configuring the new instance.
-     * @param {boolean} [recreate=false] - If true, recreates the instance even if it already exists.
-     * @returns {M} The module instance.
+     * @template M - The type of module to be created or retrieved.
+     * @param {HTMLElement} element - The HTML element to associate with the module instance.
+     * @param {boolean} recreate - Optional. Indicates whether to recreate the module instance if it already exists. Defaults to false.
+     * @returns {M} The newly created or existing module instance associated with the given HTML element.
      */
     static create(element, recreate = false) {
         const instance = this.getInstance(element);
