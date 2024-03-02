@@ -3,6 +3,7 @@ export type ModuleElements = Record<string, (HTMLElement | HTMLElement[])>;
  * Base class for creating modular components with event handling.
  */
 export declare class Module {
+    static name: string;
     private readonly _name;
     private readonly _moduleAttribute;
     private readonly _eventListeners;

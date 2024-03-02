@@ -1,4 +1,4 @@
-import {bind, findParent, getSelectorFilteredEventListener, pascalToKebab} from "./utils";
+import {bind, findParent, getSelectorFilteredEventListener, isFirstCharUppercase, pascalToKebab} from "./utils";
 
 
 
@@ -10,6 +10,8 @@ export type ModuleElements = Record<string, (HTMLElement | HTMLElement[])>;
  * Base class for creating modular components with event handling.
  */
 export class Module {
+
+    static name = "module";
 
     private readonly _name: string;
     private readonly _moduleAttribute: string;
@@ -38,8 +40,10 @@ export class Module {
      */
     constructor(el: HTMLElement)
     {
-        this._name = pascalToKebab(this.constructor.name);
-        this._moduleAttribute = `data-${this._name}`;
+        const name = this.constructor.name;
+        this._name = isFirstCharUppercase(name) ? pascalToKebab(name) : name;
+
+        this._moduleAttribute = `data-${this.name}`;
         this._eventListeners = new Map();
 
         this.el = el;
@@ -384,7 +388,7 @@ export class Module {
      */
     static getName(): string
     {
-        return pascalToKebab(this.name);
+        return isFirstCharUppercase(this.name) ? pascalToKebab(this.name) : this.name;
     }
 
     /**

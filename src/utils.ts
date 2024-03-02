@@ -153,3 +153,15 @@ export function getSelectorFilteredEventListener(selector: string, listener: Eve
         return listener(event);
     };
 }
+
+
+/**
+ * Checks if the first character of a string is uppercase.
+ *
+ * @param {string} string - The input string to be checked.
+ * @returns {boolean} Returns true if the first character is uppercase, false otherwise.
+ */
+export function isFirstCharUppercase(string: string): boolean
+{
+    return /^[A-Z]/.test(string);
+}

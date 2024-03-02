@@ -1,6 +1,104 @@
 'use strict';
 
 /**
+ * The main application class that manages modules.
+ *
+ * @class
+ */
+class App {
+    /**
+     * The array of available module classes.
+     * @private
+     * @readonly
+     */
+    modules;
+    /**
+     * Instances of modules associated with HTML elements.
+     * @private
+     */
+    moduleInstances;
+    static instance;
+    /**
+     * Creates an instance of the App class.
+     *
+     * @constructor
+     * @param {AppOptions} options - The options for configuring the App instance.
+     */
+    constructor(options) {
+        App.instance = this;
+        this.modules = options.modules;
+        this.moduleInstances = new Map();
+    }
+    /**
+     * Initialize modules within a specified context or the entire document.
+     *
+     * @param {ParentNode} [context] - The context in which to initialize modules.
+     */
+    init(context) {
+        if (!context) {
+            context = document.documentElement;
+        }
+        for (const module of this.modules) {
+            const name = module.getName();
+            const moduleAttribute = `data-module-${name}`;
+            const elements = Array.from(context.querySelectorAll(`[${moduleAttribute}]`));
+            if (context instanceof HTMLElement && context.hasAttribute(moduleAttribute)) {
+                elements.push(context);
+            }
+            for (const element of elements) {
+                const moduleInstance = module.create(element);
+                moduleInstance.init();
+                this.moduleInstances.set(element, {
+                    ...this.moduleInstances.get(element) || {},
+                    [name]: moduleInstance,
+                });
+            }
+        }
+    }
+    /**
+     * Destroy modules within a specified context or the entire document.
+     *
+     * @param {ParentNode} [context] - The context in which to destroy modules.
+     * @memberof App
+     */
+    destroy(context) {
+        for (const [element, instances] of this.moduleInstances.entries()) {
+            if (context && context !== element && !context.contains(element))
+                continue;
+            Object.values(instances).forEach((instance) => {
+                instance.destroy();
+                this.unregisterModuleInstance(element, instance);
+            });
+        }
+    }
+    /**
+     * Initializes and destroys modules within a specified context or the entire document.
+     *
+     * @param {ParentNode} [context] - The context in which to initialize modules.
+     */
+    update(context) {
+        this.destroy(context);
+        this.init(context);
+    }
+    unregisterModuleInstance(element, instance) {
+        let instances = this.moduleInstances.get(element);
+        if (!instances)
+            return;
+        if (instance) {
+            delete instances[instance.name];
+        }
+        else {
+            instances = {};
+        }
+        if (Object.keys(instances).length) {
+            this.moduleInstances.set(element, instances);
+            return;
+        }
+        this.moduleInstances.delete(element);
+    }
+}
+
+/**
  * Converts a string from PascalCase to kebab-case.
  *
  * @param {string} pascalString - The string to be converted.
@@ -125,109 +223,21 @@ function getSelectorFilteredEventListener(selector, listener) {
         return listener(event);
     };
 }
-
 /**
- * The main application class that manages modules.
+ * Checks if the first character of a string is uppercase.
  *
- * @class
+ * @param {string} string - The input string to be checked.
+ * @returns {boolean} Returns true if the first character is uppercase, false otherwise.
  */
-class App {
-    /**
-     * The array of available module classes.
-     * @private
-     * @readonly
-     */
-    modules;
-    /**
-     * Instances of modules associated with HTML elements.
-     * @private
-     */
-    moduleInstances;
-    static instance;
-    /**
-     * Creates an instance of the App class.
-     *
-     * @constructor
-     * @param {AppOptions} options - The options for configuring the App instance.
-     */
-    constructor(options) {
-        App.instance = this;
-        this.modules = options.modules;
-        this.moduleInstances = new Map();
-    }
-    /**
-     * Initialize modules within a specified context or the entire document.
-     *
-     * @param {ParentNode} [context] - The context in which to initialize modules.
-     */
-    init(context) {
-        if (!context) {
-            context = document.documentElement;
-        }
-        for (const module of this.modules) {
-            const name = pascalToKebab(module.name);
-            const moduleAttribute = `data-module-${name}`;
-            const elements = Array.from(context.querySelectorAll(`[${moduleAttribute}]`));
-            if (context instanceof HTMLElement && context.hasAttribute(moduleAttribute)) {
-                elements.push(context);
-            }
-            for (const element of elements) {
-                const moduleInstance = module.create(element);
-                moduleInstance.init();
-                this.moduleInstances.set(element, {
-                    ...this.moduleInstances.get(element) || {},
-                    [name]: moduleInstance,
-                });
-            }
-        }
-    }
-    /**
-     * Destroy modules within a specified context or the entire document.
-     *
-     * @param {ParentNode} [context] - The context in which to destroy modules.
-     * @memberof App
-     */
-    destroy(context) {
-        for (const [element, instances] of this.moduleInstances.entries()) {
-            if (context && context !== element && !context.contains(element))
-                continue;
-            Object.values(instances).forEach((instance) => {
-                instance.destroy();
-                this.unregisterModuleInstance(element, instance);
-            });
-        }
-    }
-    /**
-     * Initializes and destroys modules within a specified context or the entire document.
-     *
-     * @param {ParentNode} [context] - The context in which to initialize modules.
-     */
-    update(context) {
-        this.destroy(context);
-        this.init(context);
-    }
-    unregisterModuleInstance(element, instance) {
-        let instances = this.moduleInstances.get(element);
-        if (!instances)
-            return;
-        if (instance) {
-            delete instances[instance.name];
-        }
-        else {
-            instances = {};
-        }
-        if (Object.keys(instances).length) {
-            this.moduleInstances.set(element, instances);
-            return;
-        }
-        this.moduleInstances.delete(element);
-    }
+function isFirstCharUppercase(string) {
+    return /^[A-Z]/.test(string);
 }
 
 /**
  * Base class for creating modular components with event handling.
  */
 class Module {
+    static name = "module";
     _name;
     _moduleAttribute;
     _eventListeners;
@@ -249,8 +259,9 @@ class Module {
      * the module's basic structure and functionality, facilitating smooth reinitialization when necessary.
      */
     constructor(el) {
-        this._name = pascalToKebab(this.constructor.name);
-        this._moduleAttribute = `data-${this._name}`;
+        const name = this.constructor.name;
+        this._name = isFirstCharUppercase(name) ? pascalToKebab(name) : name;
+        this._moduleAttribute = `data-${this.name}`;
         this._eventListeners = new Map();
         this.el = el;
         this.$elements = null;
@@ -516,7 +527,7 @@ class Module {
      * @returns {string}
      */
     static getName() {
-        return pascalToKebab(this.name);
+        return isFirstCharUppercase(this.name) ? pascalToKebab(this.name) : this.name;
     }
     /**
      * Returns the CSS selector of the module's data attribute.
@@ -589,4 +600,5 @@ exports.findParent = findParent;
 exports.getEventFilteredEventListener = getEventFilteredEventListener;
 exports.getSelectorFilteredEventListener = getSelectorFilteredEventListener;
 exports.hasParent = hasParent;
+exports.isFirstCharUppercase = isFirstCharUppercase;
 exports.pascalToKebab = pascalToKebab;

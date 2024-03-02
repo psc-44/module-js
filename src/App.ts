@@ -1,5 +1,4 @@
 import {Module} from "./Module";
-import {pascalToKebab} from "./utils";
 
 
 
@@ -63,7 +62,7 @@ export class App {
         }
 
         for (const module of this.modules) {
-            const name = pascalToKebab(module.name);
+            const name = module.getName();
             const moduleAttribute = `data-module-${name}`;
             const elements = Array.from(context.querySelectorAll<HTMLElement>(`[${moduleAttribute}]`));
 

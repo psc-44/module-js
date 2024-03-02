@@ -1,8 +1,9 @@
-import { bind, findParent, getSelectorFilteredEventListener, pascalToKebab } from "./utils";
+import { bind, findParent, getSelectorFilteredEventListener, isFirstCharUppercase, pascalToKebab } from "./utils";
 /**
  * Base class for creating modular components with event handling.
  */
 export class Module {
+    static name = "module";
     _name;
     _moduleAttribute;
     _eventListeners;
@@ -24,8 +25,9 @@ export class Module {
      * the module's basic structure and functionality, facilitating smooth reinitialization when necessary.
      */
     constructor(el) {
-        this._name = pascalToKebab(this.constructor.name);
-        this._moduleAttribute = `data-${this._name}`;
+        const name = this.constructor.name;
+        this._name = isFirstCharUppercase(name) ? pascalToKebab(name) : name;
+        this._moduleAttribute = `data-${this.name}`;
         this._eventListeners = new Map();
         this.el = el;
         this.$elements = null;
@@ -291,7 +293,7 @@ export class Module {
      * @returns {string}
      */
     static getName() {
-        return pascalToKebab(this.name);
+        return isFirstCharUppercase(this.name) ? pascalToKebab(this.name) : this.name;
     }
     /**
      * Returns the CSS selector of the module's data attribute.

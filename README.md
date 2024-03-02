@@ -2,10 +2,18 @@
 
 A framework designed to facilitate the management and initialization of visible components. It provides a foundation for creating modular components with event handling capabilities.
 
-## Installation
-```shell
-yarn add @psc-44/module-js
-```
+
+## Table of contents
+* [Why](#why)
+* [Installation](#installation)
+* [Usage](#usage)
+* [Module Options](#module-options)
+* [Module Methods](#module-methods)
+* [App Methods](#app-methods)
+* [Examples](#examples)
+* [Good to know](#good-to-know)
+* [Credits](#credits)
+
 
 ## Why
 - Modular application structure.
@@ -14,6 +22,12 @@ yarn add @psc-44/module-js
 - Set module-scoped events.
 - Select module-scoped DOM elements.
 - Efficient module destruction that automatically removes events.
+
+
+## Installation
+```shell
+yarn add @psc-44/module-js
+```
 
 
 ## Usage
@@ -63,12 +77,12 @@ export class MyModule extends Module {
 ## Module options
 Set these option in your module sub class.
 
-| Option                   | Type          | Default | Description                                                   |
-|--------------------------|---------------|---------|---------------------------------------------------------------|
-| `this.autoQueryElements` | `boolean`     | `false` | Query all elements on `init()`                                |
-| `this.autoBind`          | `boolean`     | `true`  | Bind `this` to all module methods on `init()`                 |
-| `this.el`                | `HTMLElement` |         | The modules root element.                                     |
-| `this.$elements`         | `object`      | `null`  | Object of html elements bound by the modules data attributes. |
+| Option                   | Type          | Default | Description                                                                                                                                                |
+|--------------------------|---------------|---------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `this.autoQueryElements` | `boolean`     | `false` | Query all module-scoped elements on `init()`                                                                                                               |
+| `this.autoBind`          | `boolean`     | `true`  | Bind `this` to all module methods on `init()`                                                                                                              |
+| `this.el`                | `HTMLElement` |         | The modules root element. This is set automatically when the module is created.                                                                            |
+| `this.$elements`         | `object`      | `null`  | Object of html elements bound by the modules data attributes.<br>This is set automatically on `init()` when the `this.autoQueryElements` is set to `true`. |
 
 
 
@@ -310,6 +324,25 @@ export class AccordionGroup extends Module {
 }
 ```
 
+
+## Good to know
+Since the modules are identified by the class name, problems can occur with long names or minfy tools that change the class name. To solve the issue, a static property `name` can be set in classes that extend from the `Module`. Note that this name is specified in kebab-case and not in PascalCase. Here are a few examples:
+```js
+// Long names
+class ExampleModuleWithARaellyLongFuckingNameThatNoOneWillEverHave extends Module {
+    static name = "example"; // Elements with "data-module-example" are associated with this class.
+}
+
+class CookieConsentDialog extends Module {
+    static name = "cc-dialog"; // Elements with "data-module-cc-dialog" are associated with this class.
+}
+
+
+// Minify
+class YourModule extends Module {
+    static name = "your-module"; // Elements with "data-module-your-module" are associated with this class.
+}
+```
 
 ## Credits
 This code is inspired by [modularJS](https://github.com/modularorg/modularjs).
