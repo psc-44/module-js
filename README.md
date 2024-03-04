@@ -326,11 +326,12 @@ export class AccordionGroup extends Module {
 
 
 ## Good to know
-Since the modules are identified by the class name, problems can occur with long names or minfy tools that change the class name. To solve the issue, a static property `name` can be set in classes that extend from the `Module`. Note that this name is specified in kebab-case and not in PascalCase. Here are a few examples:
+Since modules are identified by the class name, problems may arise with long names or when using minification tools that alter class names. To address this issue, a static property `name` can be set in classes that extend from the `Module` class. Note that this name should be specified in either kebab-case or PascalCase.<br>Here are a few examples:
 ```js
-// Long names
+// Long name
+
 class ExampleModuleWithARaellyLongFuckingNameThatNoOneWillEverHave extends Module {
-    static name = "example"; // Elements with "data-module-example" are associated with this class.
+    static name = "Example"; // Elements with "data-module-example" are associated with this class.
 }
 
 class CookieConsentDialog extends Module {
@@ -339,6 +340,11 @@ class CookieConsentDialog extends Module {
 
 
 // Minify
+
+class YourModule extends Module {
+    static name = "YourModule"; // Elements with "data-module-your-module" are associated with this class.
+}
+
 class YourModule extends Module {
     static name = "your-module"; // Elements with "data-module-your-module" are associated with this class.
 }
