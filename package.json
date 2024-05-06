@@ -1,5 +1,5 @@
 {
-  "name": "module-js",
+  "name": "@psc-44/module-js",
   "version": "1.0.0",
   "main": "dist/index.cjs.js",
   "module": "dist/index.esm.js",

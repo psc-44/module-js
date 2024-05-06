@@ -2,6 +2,8 @@
 
 A framework designed to facilitate the management and initialization of visible components. It provides a foundation for creating modular components with event handling capabilities.
 
+🚧 This package is not stable and might change at any time 🚧
+
 
 ## Table of contents
 * [Why](#why)
